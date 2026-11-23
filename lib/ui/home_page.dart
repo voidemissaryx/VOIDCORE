@@ -13,6 +13,7 @@ import 'settings_page.dart';
 import 'smart_connection_card.dart';
 import 'theme.dart';
 import 'status_card.dart';
+import 'update_banner.dart';
 import 'v2rayng_page.dart';
 
 enum _AppSection { voidCore, v2rayNg }
@@ -72,6 +73,9 @@ class _HomePageState extends State<HomePage> {
         ),
       ),
       appBar: AppBar(
+        scrolledUnderElevation: 0,
+        backgroundColor: theme.colorScheme.surface,
+        surfaceTintColor: Colors.transparent,
         leading: Builder(builder: (context) => IconButton(
           tooltip: 'Open navigation menu',
           icon: const Icon(Symbols.menu_rounded),
@@ -113,6 +117,7 @@ class _HomePageState extends State<HomePage> {
                 child: SingleChildScrollView(
                   padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom + 16),
                   child: Column(children: [
+                    const UpdateBanner(),
                     if (state.needsReconnect) const _ReconnectBanner(),
                     const SizedBox(height: 16),
                     const ConnectionCard(),
