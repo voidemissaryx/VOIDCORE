@@ -10,6 +10,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../models/settings.dart';
 import '../services/chain_proxy.dart';
+import '../services/proxy_uri.dart';
 import '../services/vpn_channel.dart';
 import '../state/app_state.dart';
 import 'format.dart';
@@ -691,46 +692,204 @@ class _V2rayNgPageState extends State<V2rayNgPage> {
   }
 
   Future<void> _edit(ChainProxy config) async {
+    final parsed = ChainInfo.of(config.link)?.uri;
+    if (parsed == null) {
+      _message('This profile cannot be edited because its share link is invalid.');
+      return;
+    }
+
     final name = TextEditingController(text: config.name);
-    final link = TextEditingController(text: config.link);
     final category = TextEditingController(text: config.category ?? '');
-    final result = await showDialog<({String name, String link, String category})>(
+    final server = TextEditingController(text: parsed.server);
+    final port = TextEditingController(text: '${parsed.port}');
+    final fields = <String, String>{
+      'uuid': 'UUID', 'encryption': 'Encryption', 'alterId': 'Alter ID',
+      'type': 'Transport', 'headerType': 'Header Type', 'security': 'Security',
+      'sni': 'SNI', 'fp': 'Fingerprint', 'alpn': 'ALPN', 'pbk': 'Reality Public Key',
+      'sid': 'Reality Short ID', 'spx': 'SpiderX', 'flow': 'Flow', 'host': 'Host',
+      'path': 'Path', 'serviceName': 'Service Name', 'authority': 'Authority',
+      'mode': 'Mode', 'method': 'Cipher / Method', 'password': 'Password',
+      'user': 'Username', 'pass': 'Proxy Password', 'privateKey': 'Private Key',
+      'publickey': 'Public Key', 'presharedkey': 'Preshared Key', 'address': 'Address',
+      'dns': 'DNS', 'mtu': 'MTU', 'keepalive': 'Persistent Keepalive',
+      'auth': 'Authentication', 'obfs': 'Obfuscation', 'obfs-password': 'Obfuscation Password',
+      'pinSHA256': 'Certificate Pin', 'seed': 'Seed', 'quicSecurity': 'QUIC Security',
+    };
+    final controllers = <String, TextEditingController>{
+      for (final key in fields.keys)
+        key: TextEditingController(text: parsed.params[key] ?? ''),
+    };
+    var protocol = parsed.protocol;
+    const protocols = ['vless', 'vmess', 'trojan', 'shadowsocks', 'socks', 'http', 'wireguard', 'hysteria2'];
+
+    final result = await showDialog<({String name, String category, String protocol, String server, String port, Map<String, String> params})>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit configuration'),
-        content: SizedBox(
-          width: 520,
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            TextField(controller: name, decoration: const InputDecoration(labelText: 'Name')),
-            const SizedBox(height: 12),
-            TextField(controller: link, minLines: 2, maxLines: 5, decoration: const InputDecoration(labelText: 'Share link / config')),
-            const SizedBox(height: 12),
-            TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
-          ]),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, (name: name.text.trim(), link: link.text.trim(), category: category.text.trim())), child: const Text('Save')),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          Widget textField(String key, String label) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: TextField(
+              controller: controllers[key],
+              decoration: InputDecoration(labelText: label),
+              textInputAction: TextInputAction.next,
+            ),
+          );
+          Widget choiceField(String key, String label, List<String> options) {
+            final current = controllers[key]!.text;
+            final selected = options.contains(current) ? current : options.first;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: DropdownButtonFormField<String>(
+                value: selected,
+                decoration: InputDecoration(labelText: label),
+                items: options.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    controllers[key]!.text = value;
+                    setDialogState(() {});
+                  }
+                },
+              ),
+            );
+          }
+
+          return AlertDialog(
+            title: const Text('Edit configuration'),
+            content: SizedBox(
+              width: 560,
+              height: MediaQuery.sizeOf(dialogContext).height * 0.68,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(controller: name, decoration: const InputDecoration(labelText: 'Remarks / Name')),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<String>(
+                      value: protocol,
+                      decoration: const InputDecoration(labelText: 'Protocol'),
+                      items: protocols.map((value) => DropdownMenuItem(value: value, child: Text(value.toUpperCase()))).toList(),
+                      onChanged: (value) { if (value != null) setDialogState(() => protocol = value); },
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(controller: server, decoration: const InputDecoration(labelText: 'Address / Server')),
+                    const SizedBox(height: 10),
+                    TextField(controller: port, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Port')),
+                    const SizedBox(height: 10),
+                    if (protocol == 'vless' || protocol == 'vmess') ...[
+                      textField('uuid', 'UUID'),
+                      if (protocol == 'vmess') textField('alterId', 'Alter ID'),
+                      choiceField('encryption', 'Encryption', protocol == 'vless' ? ['none', 'auto'] : ['auto', 'aes-128-gcm', 'chacha20-poly1305', 'zero']),
+                      choiceField('type', 'Transport', ['tcp', 'ws', 'grpc', 'httpupgrade', 'xhttp', 'kcp', 'quic', 'h2']),
+                      choiceField('headerType', 'Header Type', ['none', 'http', 'srtp', 'utp', 'wechat-video', 'dtls', 'wireguard']),
+                      choiceField('security', 'Security', ['none', 'tls', 'reality']),
+                      textField('flow', 'Flow'),
+                      textField('pbk', 'Reality Public Key'),
+                      textField('sid', 'Reality Short ID'),
+                      textField('spx', 'Reality SpiderX'),
+                      textField('sni', 'SNI / Server Name'),
+                      textField('fp', 'Fingerprint'),
+                      textField('alpn', 'ALPN'),
+                      textField('host', 'Host'),
+                      textField('path', 'Path'),
+                      textField('serviceName', 'gRPC Service Name'),
+                      textField('authority', 'Authority'),
+                      textField('mode', 'Transport Mode'),
+                    ] else if (protocol == 'trojan') ...[
+                      textField('password', 'Password'),
+                      choiceField('type', 'Transport', ['tcp', 'ws', 'grpc', 'httpupgrade', 'xhttp']),
+                      choiceField('security', 'Security', ['tls', 'none']),
+                      textField('sni', 'SNI'),
+                      textField('fp', 'Fingerprint'),
+                      textField('alpn', 'ALPN'),
+                      textField('host', 'Host'),
+                      textField('path', 'Path'),
+                      textField('serviceName', 'gRPC Service Name'),
+                      textField('authority', 'Authority'),
+                    ] else if (protocol == 'shadowsocks') ...[
+                      textField('method', 'Encryption Method'),
+                      textField('password', 'Password'),
+                    ] else if (protocol == 'socks' || protocol == 'http') ...[
+                      textField('user', 'Username'),
+                      textField('pass', 'Password'),
+                    ] else if (protocol == 'wireguard') ...[
+                      textField('privateKey', 'Private Key'),
+                      textField('publickey', 'Public Key'),
+                      textField('presharedkey', 'Preshared Key'),
+                      textField('address', 'Interface Address'),
+                      textField('dns', 'DNS'),
+                      textField('mtu', 'MTU'),
+                      textField('keepalive', 'Persistent Keepalive'),
+                    ] else if (protocol == 'hysteria2') ...[
+                      textField('auth', 'Authentication'),
+                      textField('sni', 'SNI'),
+                      textField('obfs', 'Obfuscation'),
+                      textField('obfs-password', 'Obfuscation Password'),
+                      textField('pinSHA256', 'Certificate Pin (SHA256)'),
+                    ],
+                    const Divider(height: 24),
+                    TextField(controller: category, decoration: const InputDecoration(labelText: 'Category')),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, (
+                  name: name.text.trim(),
+                  category: category.text.trim(),
+                  protocol: protocol,
+                  server: server.text.trim(),
+                  port: port.text.trim(),
+                  params: {for (final entry in controllers.entries) entry.key: entry.value.text.trim()},
+                )),
+                child: const Text('Save configuration'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    name.dispose(); link.dispose(); category.dispose();
+
+    name.dispose();
+    category.dispose();
+    server.dispose();
+    port.dispose();
+    for (final controller in controllers.values) { controller.dispose(); }
     if (result == null) return;
     if (result.name.isEmpty) { _message('Name cannot be empty.'); return; }
+
     try {
-      final parsed = parseChainProxies(result.link);
-      if (parsed.length != 1) throw const FormatException('Enter exactly one configuration link.');
-      final duplicate = AppScope.read(context).v2rayConfigs.any((c) => c.id != config.id && c.link == parsed.single.link);
-      if (duplicate) throw const FormatException('This configuration link is already saved.');
+      final parsedPort = int.tryParse(result.port);
+      if (parsedPort == null || parsedPort < 1 || parsedPort > 65535) {
+        throw const FormatException('Port must be between 1 and 65535.');
+      }
+      final updatedLink = ProxyUri(
+        protocol: result.protocol,
+        server: result.server,
+        port: parsedPort,
+        params: result.params,
+        remark: result.name,
+      ).toShareLink();
+      final parsedUpdated = parseChainProxies(updatedLink);
+      if (parsedUpdated.length != 1) throw const FormatException('The edited configuration is invalid.');
+      final duplicate = AppScope.read(context).v2rayConfigs.any(
+        (saved) => saved.id != config.id && saved.link == parsedUpdated.single.link,
+      );
+      if (duplicate) throw const FormatException('This configuration is already saved.');
       AppScope.read(context).updateV2rayConfig(config.copyWith(
         name: result.name,
-        link: parsed.single.link,
+        link: parsedUpdated.single.link,
         category: result.category.isEmpty ? null : result.category,
         clearCategory: result.category.isEmpty,
       ));
       _latencies.remove(config.id);
       _message('Configuration updated.');
-    } on FormatException catch (e) { _message(e.message); }
+    } on FormatException catch (error) {
+      _message(error.message);
+    } catch (error) {
+      _message('Could not save configuration: $error');
+    }
   }
 
   Future<void> _deleteSelected(List<ChainProxy> configs) async {
