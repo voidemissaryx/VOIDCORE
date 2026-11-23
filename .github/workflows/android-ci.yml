@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   test-and-build:
@@ -73,13 +73,18 @@ jobs:
       - name: Flutter tests
         run: flutter test --no-pub
 
-      - name: Build debug APK
-        run: flutter build apk --debug --no-pub
+      - name: Build release APK
+        run: flutter build apk --release --no-pub
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+      - name: Publish APK to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: voidcore-1.4.1-debug
-          path: build/app/outputs/flutter-apk/app-debug.apk
-          if-no-files-found: error
-          retention-days: 7
+          tag_name: v1.4.2
+          target_commitish: ${{ github.sha }}
+          name: VOIDCORE 1.4.2
+          body: |
+            ## VOIDCORE 1.4.2
+
+            Android release build for VOIDCORE VPN.
+          overwrite_files: true
+          files: build/app/outputs/flutter-apk/app-release.apk
