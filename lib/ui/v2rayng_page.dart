@@ -1178,7 +1178,7 @@ class _V2rayNgPageState extends State<V2rayNgPage> {
                   return TweenAnimationBuilder<double>(
                     key: ValueKey('v2ray-card-${config.id}'),
                     tween: Tween<double>(begin: 0, end: 1),
-                    duration: Duration(milliseconds: 260 + (index.clamp(0, 8) * 35)),
+                    duration: Duration(milliseconds: 260 + (index.clamp(0, 8) * 35).toInt()),
                     curve: Curves.easeOutCubic,
                     builder: (context, value, child) => Opacity(
                       opacity: value,
