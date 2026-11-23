@@ -40,7 +40,7 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
           fi
           if [[ -z "$VERSION" && "$GITHUB_REF_TYPE" == "branch" ]]; then
-            VERSION=$(sed -E 's/^version: *([^+ ]+).*/\\1/' < <(grep '^version:' pubspec.yaml))
+            VERSION=$(awk -F'[ +]' '/^version:/ {print $2; exit}' pubspec.yaml)
           fi
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+(\.[0-9]+)?$ ]]; then
             echo "::error::Invalid version format. Use X.Y or X.Y.Z (for example 1.5 or 1.5.0)"
