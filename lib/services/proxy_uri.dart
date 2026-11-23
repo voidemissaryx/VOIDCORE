@@ -41,6 +41,76 @@ class ProxyUri {
     'hy2',
   };
 
+  /// Serializes the editable fields back into a standard share link.
+  String toShareLink() {
+    if (server.trim().isEmpty || port < 1 || port > 65535) {
+      throw const FormatException('Enter a valid server address and port.');
+    }
+    final p = Map<String, String>.of(params)
+      ..remove('uuid')
+      ..remove('password')
+      ..remove('method')
+      ..remove('user')
+      ..remove('pass')
+      ..remove('privateKey')
+      ..remove('auth');
+    final scheme = protocol == 'shadowsocks' ? 'ss' : protocol;
+    if (protocol == 'vmess') {
+      final vmess = <String, dynamic>{
+        'v': '2',
+        'ps': remark,
+        'add': server,
+        'port': port.toString(),
+        'id': params['uuid'] ?? '',
+        'aid': params['alterId'] ?? '0',
+        'scy': params['encryption'] ?? 'auto',
+        'net': params['type'] ?? 'tcp',
+        'type': params['headerType'] ?? 'none',
+        'host': params['host'] ?? '',
+        'path': params['path'] ?? params['serviceName'] ?? '',
+        'tls': params['security'] == 'tls' ? 'tls' : '',
+        'sni': params['sni'] ?? '',
+        'alpn': params['alpn'] ?? '',
+        'fp': params['fp'] ?? '',
+      };
+      for (final key in ['authority', 'mode', 'seed', 'quicSecurity', 'key']) {
+        if ((params[key] ?? '').isNotEmpty) vmess[key] = params[key];
+      }
+      return 'vmess://${base64Encode(utf8.encode(jsonEncode(vmess)))}';
+    }
+
+    String userInfo = '';
+    switch (protocol) {
+      case 'vless':
+        userInfo = params['uuid'] ?? '';
+      case 'trojan':
+        userInfo = params['password'] ?? '';
+      case 'shadowsocks':
+        userInfo = '${params['method'] ?? 'aes-128-gcm'}:${params['password'] ?? ''}';
+      case 'socks':
+      case 'http':
+        final user = params['user'] ?? '';
+        final pass = params['pass'] ?? '';
+        if (user.isNotEmpty || pass.isNotEmpty) userInfo = '$user:$pass';
+      case 'wireguard':
+        userInfo = params['privateKey'] ?? '';
+      case 'hysteria2':
+        userInfo = params['auth'] ?? '';
+    }
+    final query = <String, String>{
+      for (final entry in p.entries)
+        if (entry.value.isNotEmpty) entry.key: entry.value,
+    };
+    return Uri(
+      scheme: scheme,
+      userInfo: userInfo,
+      host: server.trim(),
+      port: port,
+      queryParameters: query.isEmpty ? null : query,
+      fragment: remark.isEmpty ? null : remark,
+    ).toString();
+  }
+
   /// Parses [input]; throws [FormatException] if it isn't a supported link.
   factory ProxyUri.parse(String input) {
     final text = input.trim();
