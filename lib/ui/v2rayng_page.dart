@@ -14,6 +14,7 @@ import '../services/proxy_uri.dart';
 import '../services/vpn_channel.dart';
 import '../state/app_state.dart';
 import 'format.dart';
+import 'update_banner.dart';
 
 /// The V2Ray workspace manages imported share-link profiles using the app's existing Xray engine.
 /// It shares the single VPN service with VOIDCORE and never starts a second tunnel.
@@ -1113,6 +1114,7 @@ class _V2rayNgPageState extends State<V2rayNgPage> {
       ),
       body: CustomScrollView(
         slivers: [
+          const SliverToBoxAdapter(child: UpdateBanner()),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
@@ -1513,13 +1515,13 @@ class _V2rayPowerCard extends StatelessWidget {
     return Card(
       margin: EdgeInsets.zero,
       color: scheme.surfaceContainer,
-      elevation: 0,
+      elevation: 1,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(26),
         side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .75)),
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 18, 16, 16),
+        padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
         child: Column(
           children: [
             Text(
@@ -1543,8 +1545,8 @@ class _V2rayPowerCard extends StatelessWidget {
                               : 'Connect selected V2Ray profile',
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
-                    width: 120,
-                    height: 120,
+                    width: 128,
+                    height: 128,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: LinearGradient(
