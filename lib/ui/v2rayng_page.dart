@@ -384,51 +384,174 @@ class _V2rayNgPageState extends State<V2rayNgPage> {
   }
 
   Future<void> _manualImport() async {
-    final controller = TextEditingController();
-    final categoryController = TextEditingController();
-    final result = await showDialog<({String text, String category})>(
+    const protocols = ['vless', 'vmess', 'trojan', 'shadowsocks', 'socks', 'http', 'wireguard', 'hysteria2'];
+    const labels = <String, String>{
+      'uuid': 'UUID', 'encryption': 'Encryption', 'alterId': 'Alter ID',
+      'type': 'Transport', 'headerType': 'Header Type', 'security': 'Security',
+      'sni': 'SNI / Server Name', 'fp': 'Fingerprint', 'alpn': 'ALPN',
+      'pbk': 'Reality Public Key', 'sid': 'Reality Short ID', 'spx': 'Reality SpiderX',
+      'flow': 'Flow', 'host': 'Host', 'path': 'Path', 'serviceName': 'gRPC Service Name',
+      'authority': 'Authority', 'mode': 'Transport Mode', 'method': 'Cipher / Method',
+      'password': 'Password', 'user': 'Username', 'pass': 'Proxy Password',
+      'privateKey': 'Private Key', 'publickey': 'Public Key', 'presharedkey': 'Preshared Key',
+      'address': 'Interface Address', 'dns': 'DNS', 'mtu': 'MTU', 'keepalive': 'Persistent Keepalive',
+      'auth': 'Authentication', 'obfs': 'Obfuscation', 'obfs-password': 'Obfuscation Password',
+      'pinSHA256': 'Certificate Pin (SHA256)', 'reserved': 'Reserved bytes',
+    };
+    final name = TextEditingController();
+    final category = TextEditingController();
+    final server = TextEditingController();
+    final port = TextEditingController(text: '443');
+    final controllers = {for (final key in labels.keys) key: TextEditingController()};
+    var protocol = 'vless';
+
+    final result = await showDialog<({String name, String category, String protocol, String server, String port, Map<String, String> params})>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Add manually'),
-        content: SizedBox(
-          width: 520,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                minLines: 4,
-                maxLines: 8,
-                autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Configuration link or WireGuard config',
-                  hintText: 'vless://… or vmess://…',
-                  alignLabelWithHint: true,
-                ),
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          Widget field(String key) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: TextField(
+              controller: controllers[key],
+              decoration: InputDecoration(labelText: labels[key]),
+              textInputAction: TextInputAction.next,
+            ),
+          );
+          Widget choice(String key, List<String> values) {
+            final current = controllers[key]!.text;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: DropdownButtonFormField<String>(
+                value: values.contains(current) ? current : values.first,
+                decoration: InputDecoration(labelText: labels[key]),
+                items: values.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                onChanged: (v) { if (v != null) controllers[key]!.text = v; },
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: categoryController,
-                decoration: const InputDecoration(labelText: 'Category (optional)'),
+            );
+          }
+
+          List<Widget> protocolFields() {
+            switch (protocol) {
+              case 'vless':
+              case 'vmess':
+                return [
+                  field('uuid'),
+                  if (protocol == 'vmess') field('alterId'),
+                  choice('encryption', protocol == 'vless' ? ['none', 'auto'] : ['auto', 'aes-128-gcm', 'chacha20-poly1305', 'zero']),
+                  choice('type', ['tcp', 'ws', 'grpc', 'httpupgrade', 'xhttp', 'kcp', 'h2']),
+                  choice('headerType', ['none', 'http', 'srtp', 'utp', 'wechat-video', 'dtls', 'wireguard']),
+                  choice('security', ['none', 'tls', 'reality']),
+                  field('flow'), field('sni'), field('fp'), field('alpn'),
+                  if (controllers['security']!.text == 'reality' || protocol == 'vless') ...[field('pbk'), field('sid'), field('spx')],
+                  field('host'), field('path'), field('serviceName'), field('authority'), field('mode'),
+                ];
+              case 'trojan':
+                return [
+                  field('password'),
+                  choice('type', ['tcp', 'ws', 'grpc', 'httpupgrade', 'xhttp']),
+                  choice('security', ['tls', 'none']),
+                  field('sni'), field('fp'), field('alpn'), field('host'), field('path'), field('serviceName'), field('authority'),
+                ];
+              case 'shadowsocks':
+                return [field('method'), field('password')];
+              case 'socks':
+              case 'http':
+                return [field('user'), field('pass')];
+              case 'wireguard':
+                return [field('privateKey'), field('publickey'), field('presharedkey'), field('address'), field('dns'), field('mtu'), field('keepalive'), field('reserved')];
+              case 'hysteria2':
+                return [field('auth'), field('sni'), field('obfs'), field('obfs-password'), field('pinSHA256')];
+              default:
+                return [];
+            }
+          }
+
+          return AlertDialog(
+            title: const Text('Add configuration manually'),
+            content: SizedBox(
+              width: 540,
+              height: MediaQuery.sizeOf(dialogContext).height * 0.68,
+              child: SingleChildScrollView(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(controller: name, decoration: const InputDecoration(labelText: 'Remarks / Name')),
+                  const SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    value: protocol,
+                    decoration: const InputDecoration(labelText: 'Protocol'),
+                    items: protocols.map((v) => DropdownMenuItem(value: v, child: Text(v.toUpperCase()))).toList(),
+                    onChanged: (v) => setDialogState(() { if (v != null) protocol = v; }),
+                  ),
+                  const SizedBox(height: 10),
+                  TextField(controller: server, decoration: const InputDecoration(labelText: 'Address / IP / Domain')),
+                  const SizedBox(height: 10),
+                  TextField(controller: port, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Port')),
+                  const Divider(height: 24),
+                  ...protocolFields(),
+                  const Divider(height: 24),
+                  TextField(controller: category, decoration: const InputDecoration(labelText: 'Category (optional)')),
+                ]),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, (
+                  name: name.text.trim(),
+                  category: category.text.trim(),
+                  protocol: protocol,
+                  server: server.text.trim(),
+                  port: port.text.trim(),
+                  params: {for (final e in controllers.entries) e.key: e.value.text.trim()},
+                )),
+                child: const Text('Add configuration'),
               ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () => Navigator.pop(
-              dialogContext,
-              (text: controller.text, category: categoryController.text.trim()),
-            ),
-            child: const Text('Import'),
-          ),
-        ],
+          );
+        },
       ),
     );
-    controller.dispose();
-    categoryController.dispose();
-    if (result != null) _importText(result.text, category: result.category.isEmpty ? null : result.category);
+
+    name.dispose();
+    category.dispose();
+    server.dispose();
+    port.dispose();
+    for (final c in controllers.values) { c.dispose(); }
+    if (result == null) return;
+    try {
+      final parsedPort = int.tryParse(result.port);
+      if (result.name.isEmpty) throw const FormatException('Enter a profile name.');
+      if (result.server.isEmpty || parsedPort == null || parsedPort < 1 || parsedPort > 65535) {
+        throw const FormatException('Enter a valid IP/domain and port (1–65535).');
+      }
+      final link = ProxyUri(
+        protocol: result.protocol,
+        server: result.server,
+        port: parsedPort,
+        params: result.params,
+        remark: result.name,
+      ).toShareLink();
+      final parsed = parseChainProxies(link);
+      if (parsed.length != 1) throw const FormatException('Could not create this configuration.');
+      final state = AppScope.read(context);
+      final before = state.v2rayConfigs.length;
+      state.addV2rayConfigs([
+        ChainProxy(
+          id: parsed.single.id,
+          name: result.name,
+          link: parsed.single.link,
+          category: result.category.isEmpty ? null : result.category,
+        ),
+      ]);
+      if (state.v2rayConfigs.length == before) {
+        _message('This configuration is already imported.');
+      } else {
+        _message('Configuration added successfully.');
+      }
+    } on FormatException catch (e) {
+      _message(e.message);
+    } catch (e) {
+      _message('Could not add configuration: $e');
+    }
   }
 
   Future<void> _importClipboard() async {
