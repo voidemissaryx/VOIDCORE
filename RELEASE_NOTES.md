@@ -1,4 +1,7 @@
-# 🚀 VOIDCORE VPN
+# 🚀 VOIDCORE VPN — Version 1.4.2
+
+This release includes the refreshed VPN interface, expanded manual V2Ray profile editor, and GitHub update notifications.
+
 
 **A smarter, simpler, and more powerful VPN experience.**
 
