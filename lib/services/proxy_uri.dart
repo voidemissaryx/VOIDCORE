@@ -46,6 +46,21 @@ class ProxyUri {
     if (server.trim().isEmpty || port < 1 || port > 65535) {
       throw const FormatException('Enter a valid server address and port.');
     }
+    if ((protocol == 'vless' || protocol == 'vmess') && (params['uuid'] ?? '').isEmpty) {
+      throw const FormatException('UUID is required for this protocol.');
+    }
+    if (protocol == 'trojan' && (params['password'] ?? '').isEmpty) {
+      throw const FormatException('Trojan password is required.');
+    }
+    if (protocol == 'shadowsocks' && ((params['method'] ?? '').isEmpty || (params['password'] ?? '').isEmpty)) {
+      throw const FormatException('Shadowsocks method and password are required.');
+    }
+    if (protocol == 'wireguard' && ((params['privateKey'] ?? '').isEmpty || (params['publickey'] ?? '').isEmpty)) {
+      throw const FormatException('WireGuard private and public keys are required.');
+    }
+    if (protocol == 'hysteria2' && (params['auth'] ?? '').isEmpty) {
+      throw const FormatException('Hysteria2 authentication is required.');
+    }
     final p = Map<String, String>.of(params)
       ..remove('uuid')
       ..remove('password')
@@ -202,6 +217,8 @@ class ProxyUri {
       remark: remark.isNotEmpty ? remark : s('ps'),
       params: {
         'uuid': s('id'),
+        'alterId': s('aid'),
+        'encryption': s('scy'),
         'type': s('net'),
         'headerType': s('type'),
         'serviceName': s('path'),
