@@ -18,7 +18,7 @@ class _UpdateBannerState extends State<UpdateBanner> {
 
   int _versionNumber(String value) {
     final clean = value.trim().replaceFirst(RegExp(r'^[vV]'), '').split('+').first;
-    final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?.firstMatch(clean);
+    final match = RegExp(r'^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?').firstMatch(clean);
     if (match == null) return 0;
     return int.parse(match.group(1)!) * 1000000 +
         int.parse(match.group(2)!) * 1000 +
