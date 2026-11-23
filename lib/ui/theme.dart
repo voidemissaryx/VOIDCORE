@@ -78,7 +78,7 @@ ThemeData _buildTheme(ColorScheme scheme) {
       contentPadding: EdgeInsets.symmetric(horizontal: 20),
     ),
     // Superellipse corners for every card and dialog.
-    cardTheme: CardThemeData(shape: roundedShape(kSmallCardRadius)),
+    cardTheme: CardThemeData(shape: roundedShape(kCardRadius), elevation: 0, margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5)),
     dialogTheme: DialogThemeData(shape: roundedShape(kDialogRadius)),
     // One style for every text and dropdown field. For filled fields instead of outlined:
     // InputDecorationTheme(filled: true, border: OutlineInputBorder(borderSide: BorderSide.none, borderRadius: …)).
@@ -97,6 +97,9 @@ ThemeData _buildTheme(ColorScheme scheme) {
       ),
     ),
     // Floating messages, shaped like the small cards.
+    appBarTheme: AppBarTheme(centerTitle: false, elevation: 0, scrolledUnderElevation: 0, backgroundColor: scheme.surface, surfaceTintColor: Colors.transparent, titleTextStyle: TextStyle(color: scheme.onSurface, fontSize: 20, fontWeight: FontWeight.w800, fontFamily: 'OpenSans')),
+    filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13))),
+    outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12))),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       shape: roundedShape(kSmallCardRadius),
