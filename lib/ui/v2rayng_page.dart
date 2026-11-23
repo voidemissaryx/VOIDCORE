@@ -1175,7 +1175,19 @@ class _V2rayNgPageState extends State<V2rayNgPage> {
                   final info = ChainInfo.of(config.link);
                   final latency = _latencies[config.id];
                   final selected = _selected.contains(config.id);
-                  return Padding(
+                  return TweenAnimationBuilder<double>(
+                    key: ValueKey('v2ray-card-${config.id}'),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: Duration(milliseconds: 260 + (index.clamp(0, 8) * 35)),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, value, child) => Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, 14 * (1 - value)),
+                        child: child,
+                      ),
+                    ),
+                    child: Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Card(
                       color: state.activeV2rayId == config.id && state.isConnected
@@ -1278,6 +1290,7 @@ class _V2rayNgPageState extends State<V2rayNgPage> {
                           ],
                         ]),
                       ),
+                    ),
                     ),
                   );
                 },
