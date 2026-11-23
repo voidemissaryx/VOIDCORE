@@ -90,27 +90,44 @@ class _HomePageState extends State<HomePage> {
           IconButton(tooltip: 'Connection history', icon: const Icon(Symbols.history_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectionHistoryPage()))),
         ],
       ),
-      body: _section == _AppSection.v2rayNg
-          ? const V2rayNgPage()
-          : SafeArea(
-              bottom: false,
-              child: SingleChildScrollView(
-                padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom + 16),
-                child: Column(children: [
-                  if (state.needsReconnect) const _ReconnectBanner(),
-                  const SizedBox(height: 16),
-                  const ConnectionCard(),
-                  const SizedBox(height: 12),
-                  const SmartConnectionCard(),
-                  const SizedBox(height: 16),
-                  const StatusCard(),
-                  const SizedBox(height: 16),
-                  const _TrafficRow(),
-                  const SizedBox(height: 16),
-                  if (state.worker != null && state.mode.needsWorker) const _UsageCard(),
-                ]),
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 320),
+        reverseDuration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.035, 0),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        ),
+        child: _section == _AppSection.v2rayNg
+            ? const V2rayNgPage(key: ValueKey('workspace-v2ray'))
+            : SafeArea(
+                key: const ValueKey('workspace-voidcore'),
+                bottom: false,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.only(bottom: MediaQuery.viewPaddingOf(context).bottom + 16),
+                  child: Column(children: [
+                    if (state.needsReconnect) const _ReconnectBanner(),
+                    const SizedBox(height: 16),
+                    const ConnectionCard(),
+                    const SizedBox(height: 12),
+                    const SmartConnectionCard(),
+                    const SizedBox(height: 16),
+                    const StatusCard(),
+                    const SizedBox(height: 16),
+                    const _TrafficRow(),
+                    const SizedBox(height: 16),
+                    if (state.worker != null && state.mode.needsWorker) const _UsageCard(),
+                  ]),
+                ),
               ),
-            ),
+      ),
     );
   }
 }
