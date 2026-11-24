@@ -276,8 +276,40 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                   ],
                 ])),
                 const SizedBox(height: 16),
-                if (_message != null) Padding(padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(_message!, textAlign: TextAlign.center, style: TextStyle(color: scheme.primary))),
+                if (_message != null && _message!.startsWith('Your account is currently suspended.'))
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Card(
+                      color: scheme.errorContainer.withValues(alpha: .38),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                        side: BorderSide(color: scheme.error.withValues(alpha: .45)),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(18),
+                        child: Column(
+                          children: [
+                            Icon(Symbols.gpp_bad_rounded, size: 42, color: scheme.error),
+                            const SizedBox(height: 10),
+                            Text('ACCOUNT SUSPENDED',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: scheme.error, fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                            const SizedBox(height: 8),
+                            Text(_message!, textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(height: 1.45)),
+                            const SizedBox(height: 10),
+                            Text('VOIDCORE SECURITY · ACCESS RESTRICTED',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: scheme.onSurfaceVariant, letterSpacing: .6)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else if (_message != null)
+                  Padding(padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(_message!, textAlign: TextAlign.center, style: TextStyle(color: scheme.primary))),
                 FilledButton(onPressed: _busy ? null : _submit,
                   child: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
                     : Text(_creating ? 'Create VOIDCORE account' : 'Sign in')),
