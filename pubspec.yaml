@@ -2,8 +2,7 @@ name: bpb
 description: "Cross-platform VPN client."
 publish_to: "none"
 
-version: 1.4.2+8
-
+version: 1.4.5+9
 environment:
   sdk: ^3.13.5
 
