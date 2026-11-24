@@ -852,7 +852,7 @@ class _DoneStep extends StatelessWidget {
         if (skipped.isNotEmpty) ...[
           const SizedBox(height: 16),
           const Text("These protocols will be available once you finish setting them up:"),
-          if (deploySkipped) const Text('• Worker: add a Cloudflare account in Settings → VLESS → Cloudflare accounts.'),
+          if (deploySkipped) const Text('• Worker: verify your Cloudflare API token from Account → Cloudflare Verification.'),
           if (registerSkipped) const Text('• WARP / MASQUE: Settings → Warp or Masque → Register.'),
           if (!addingAccount) const Text('Psiphon, Tor and Serverless work without them.'),
         ],
