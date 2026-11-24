@@ -26,8 +26,14 @@ Deno.serve(async (req: Request) => {
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey, { auth: { persistSession: false } });
   const { data: { user }, error: authError } = await admin.auth.getUser(authorization.slice(7));
   if (authError || !user) return reply({ error: "Invalid session" }, 401);
+  // The original VOIDCORE owner is bound to an immutable Supabase Auth UUID.
+  // Never authorize by username or editable user_metadata.
+  const OWNER_USER_ID = "94b075d7-2d97-40d0-86d8-22a1b075d473";
+  const isOwner = user.id === OWNER_USER_ID;
   const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (profile?.role !== "admin") return reply({ error: "Administrator access required" }, 403);
+  if (!isOwner && profile?.role !== "admin") {
+    return reply({ error: "Administrator access required" }, 403);
+  }
   let body: { action?: string; userId?: string; username?: string; email?: string; password?: string };
   try { body = await req.json(); } catch { return reply({ error: "Invalid request body" }, 400); }
   if (body.action === "list") {
@@ -40,7 +46,7 @@ Deno.serve(async (req: Request) => {
     const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
     return reply({ users: data.users.map((u) => ({
       id: u.id, email: u.email, username: byId.get(u.id)?.username ?? u.user_metadata?.username ?? "Unknown",
-      role: byId.get(u.id)?.role ?? "user", created_at: u.created_at,
+      role: u.id === "94b075d7-2d97-40d0-86d8-22a1b075d473" ? "admin" : (byId.get(u.id)?.role ?? "user"), created_at: u.created_at,
       email_confirmed_at: u.email_confirmed_at,
       disabled: Boolean(byId.get(u.id)?.disabled_at) || Boolean(u.banned_until && new Date(u.banned_until) > new Date()),
     })) });
@@ -49,7 +55,9 @@ Deno.serve(async (req: Request) => {
   const { data: target, error: targetError } = await admin.auth.admin.getUserById(body.userId);
   if (targetError || !target.user) return reply({ error: "Account not found" }, 404);
   const { data: targetProfile } = await admin.from("profiles").select("role").eq("id", body.userId).maybeSingle();
-  if (targetProfile?.role === "admin") return reply({ error: "Administrator accounts are protected" }, 403);
+  if (body.userId === "94b075d7-2d97-40d0-86d8-22a1b075d473" || targetProfile?.role === "admin") {
+    return reply({ error: "Administrator accounts are protected" }, 403);
+  }
   if (body.action === "disable" || body.action === "enable") {
     const disabled = body.action === "disable";
     const { error } = await admin.auth.admin.updateUserById(body.userId, { ban_duration: disabled ? "876000h" : "none" });
