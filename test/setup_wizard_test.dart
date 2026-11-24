@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   Future<void> pumpWizard(WidgetTester tester) async {
-    // A small phone (360×800 dp) to catch overflows.
+    // A small phone (360×800 dp) to catch layout overflows.
     tester.view.physicalSize = const Size(1080, 2400);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
@@ -15,36 +15,37 @@ void main() {
         child: const MaterialApp(home: SetupWizard()),
       ),
     );
+    await tester.pumpAndSettle();
   }
 
-  testWidgets('step 1 asks about a Cloudflare account, No shows sign-up steps', (tester) async {
+  testWidgets('first setup step presents VOIDCORE account creation', (tester) async {
     await pumpWizard(tester);
+
     expect(find.text('Step 1 of 3'), findsOneWidget);
-    expect(find.text('Welcome to VOIDCORE'), findsOneWidget);
-
-    await tester.tap(find.text('No, sign me up'));
-    await tester.pumpAndSettle();
-    expect(find.text('Create your Cloudflare account'), findsOneWidget);
-
-    await tester.tap(find.text('Back'));
-    await tester.pumpAndSettle();
-    expect(find.text('Welcome to VOIDCORE'), findsOneWidget);
+    expect(find.text('YOUR VOIDCORE ID'), findsOneWidget);
+    expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('Username'), findsOneWidget);
+    expect(find.text('Email address'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
   });
 
-  testWidgets('Yes goes to the token step, Back returns', (tester) async {
+  testWidgets('sign-in mode hides username and keeps email and password fields', (tester) async {
     await pumpWizard(tester);
-    await tester.tap(find.text('Yes'));
-    await tester.pumpAndSettle();
-    expect(find.text('Step 2 of 3'), findsOneWidget);
-    expect(find.text('Create an API token'), findsOneWidget);
 
-    // Next without a token shows an error instead of calling Cloudflare.
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
-    expect(find.text('Paste your API token first'), findsOneWidget);
 
-    await tester.tap(find.text('Back'));
+    expect(find.text('YOUR VOIDCORE ID'), findsOneWidget);
+    expect(find.text('Username'), findsNothing);
+    expect(find.text('Email address'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
+
+    await tester.tap(find.text('Create account').first);
     await tester.pumpAndSettle();
-    expect(find.text('Step 1 of 3'), findsOneWidget);
+
+    expect(find.text('Username'), findsOneWidget);
+    expect(find.text('Email address'), findsOneWidget);
+    expect(find.text('Password'), findsOneWidget);
   });
 }
