@@ -15,14 +15,11 @@ import '../state/app_state.dart';
 import 'cf_accounts_page.dart';
 import 'voidcore_account_page.dart';
 
-const _signUpUrl = 'https://dash.cloudflare.com/sign-up';
-
 /// A checked API token: the token, its user's email and the accounts it can access.
 typedef CheckedToken = ({String token, String email, List<CfAccount> accounts});
 
-/// First-run setup, like BPB-Wizard's three steps: Cloudflare account → API token →
-/// install the VPN worker. Shown instead of the home page until a worker is set up, and pushed
-/// by Cloudflare accounts → Add account ([addingAccount]); every run deploys a fresh worker.
+/// First-run setup: VOIDCORE identity → Cloudflare token verification → native service installation.
+/// The token is entered only in Cloudflare Verification, then passed here after validation.
 class SetupWizard extends StatefulWidget {
   final bool addingAccount;
   final CheckedToken? initialToken;
@@ -36,9 +33,6 @@ enum _Step { voidcore, install, done }
 
 class _SetupWizardState extends State<SetupWizard> {
   _Step _step = _Step.voidcore;
-
-  /// Tapped "No" on step 1: sign-up page opened, waiting for the user to come back.
-  bool _signingUp = false;
 
   CheckedToken? _token;
   @override
