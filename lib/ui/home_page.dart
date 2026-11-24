@@ -16,6 +16,7 @@ import 'status_card.dart';
 import 'update_banner.dart';
 import 'v2rayng_page.dart';
 import 'voidcore_account_page.dart';
+import 'cf_accounts_page.dart';
 import '../services/voidcore_auth.dart';
 
 enum _AppSection { voidCore, v2rayNg }
@@ -57,10 +58,17 @@ class _HomePageState extends State<HomePage> {
               ),
               _WorkspaceButton(
                 title: 'VOIDCORE',
-                subtitle: 'Native connection methods',
+                subtitle: state.cfAccounts.isNotEmpty ? 'Workers, Pages, WARP & MASQUE' : 'Verify Cloudflare token to unlock',
                 icon: Symbols.shield_rounded,
                 selected: _section == _AppSection.voidCore,
-                onTap: () { setState(() => _section = _AppSection.voidCore); Navigator.pop(context); },
+                onTap: () {
+                  Navigator.pop(context);
+                  if (state.cfAccounts.isEmpty) {
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CfAccountsPage()));
+                  } else {
+                    setState(() => _section = _AppSection.voidCore);
+                  }
+                },
               ),
               _WorkspaceButton(
                 title: 'V2RayNG',
