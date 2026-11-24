@@ -32,6 +32,17 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   // VOIDCORE is intentionally the default section on every app launch.
   _AppSection _section = _AppSection.voidCore;
+  late Future<bool> _adminStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _adminStatus = VoidcoreAuthService().isAdmin();
+  }
+
+  void _refreshAdminStatus() {
+    setState(() => _adminStatus = VoidcoreAuthService().isAdmin());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +110,7 @@ class _HomePageState extends State<HomePage> {
                         onTap: () {
                           Navigator.pop(context);
                           Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()))
-                            .then((_) { if (mounted) setState(() {}); });
+                            .then((_) { if (mounted) { setState(() {}); _refreshAdminStatus(); } });
                         },
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
@@ -161,10 +172,8 @@ class _HomePageState extends State<HomePage> {
           IconButton(tooltip: 'Connection history', icon: const Icon(Symbols.history_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectionHistoryPage()))),
           IconButton(tooltip: 'Logs', icon: const Icon(Symbols.bug_report_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LogPage()))),
           IconButton(tooltip: 'View config', icon: const Icon(Symbols.data_object_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConfigViewPage()))),
-          FutureBuilder<Map<String, dynamic>?>(future: VoidcoreAuthService().currentUser(), builder: (context, snapshot) {
-            final metadata = snapshot.data?['user_metadata'];
-            final username = metadata is Map ? (metadata['username'] ?? '').toString().toLowerCase() : '';
-            if (username != 'voidemissaryx') return const SizedBox.shrink();
+          FutureBuilder<bool>(future: _adminStatus, builder: (context, snapshot) {
+            if (snapshot.data != true) return const SizedBox.shrink();
             return IconButton(
               tooltip: 'Admin Dashboard',
               icon: const Icon(Symbols.admin_panel_settings_rounded),
