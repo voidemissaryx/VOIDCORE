@@ -116,13 +116,19 @@ class VoidcoreAuthService {
   }
 
   /// Reads the signed-in user's own profile role; never trusts editable auth metadata.
+  static const _ownerUserId = '94b075d7-2d97-40d0-86d8-22a1b075d473';
+
+  /// The owner is identified by immutable Supabase Auth user ID.
+  /// Other administrators must have role=admin in public.profiles.
   Future<bool> isAdmin() async {
     if (!isConfigured) return false;
-    final token = await _storage.read(key: _access);
-    if (token == null) return false;
     final user = await currentUser();
     final id = user?['id'];
     if (id is! String || id.isEmpty) return false;
+    if (id == _ownerUserId) return true;
+
+    final token = await _storage.read(key: _access);
+    if (token == null) return false;
     final uri = Uri.parse('$_base/rest/v1/profiles').replace(
       queryParameters: {'select': 'role', 'id': 'eq.$id'},
     );
