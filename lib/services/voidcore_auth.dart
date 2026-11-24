@@ -98,6 +98,21 @@ class VoidcoreAuthService {
     await updateUser({'password': password});
   }
 
+  Future<Map<String, dynamic>> adminRequest(Map<String, dynamic> body) async {
+    final token = await _storage.read(key: _access);
+    if (token == null) throw Exception('Sign in to continue.');
+    final response = await http.post(
+      Uri.parse('$_base/functions/v1/admin-users'),
+      headers: {'apikey': _key, 'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+    final data = _map(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception((data['error'] ?? 'Admin request failed').toString());
+    }
+    return data;
+  }
+
   Future<void> signOut() async {
     final token = await _storage.read(key: _access);
     try {
