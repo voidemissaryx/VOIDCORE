@@ -178,8 +178,8 @@ jobs:
             printf 'keyPassword=%s\n' "$KEY_PASSWORD"
           } > android/key.properties
           mkdir -p dist
-          flutter build apk --release --split-per-abi --no-pub \\
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \\
+          flutter build apk --release --split-per-abi --no-pub \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
           for abi in arm64-v8a armeabi-v7a x86_64; do
             apk="build/app/outputs/flutter-apk/app-$abi-release.apk"
@@ -190,8 +190,8 @@ jobs:
             cp "$apk" "dist/voidcore-$VERSION-$abi.apk"
           done
 
-          flutter build apk --release --no-pub \\
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \\
+          flutter build apk --release --no-pub \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
           apk="build/app/outputs/flutter-apk/app-release.apk"
           if [ ! -s "$apk" ]; then
