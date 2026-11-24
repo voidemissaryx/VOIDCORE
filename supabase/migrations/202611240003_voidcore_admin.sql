@@ -10,3 +10,9 @@ alter table public.profiles
 
 -- After the owner has created their VOIDCORE account, run this manually:
 -- update public.profiles set role = 'admin' where lower(username) = 'voidemissaryx';
+
+-- Prevent authenticated users from changing their own role or suspension flag.
+-- The profile creation trigger runs as its SECURITY DEFINER owner.
+revoke insert, update, delete on public.profiles from authenticated;
+grant select on public.profiles to authenticated;
+grant update (username, avatar_path) on public.profiles to authenticated;
