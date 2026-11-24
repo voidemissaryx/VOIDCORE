@@ -1,182 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
-import '../models/cf_account.dart';
-import '../services/cloudflare_api.dart';
-import '../services/net_errors.dart';
-import '../services/vpn_channel.dart';
 import '../state/app_state.dart';
-import 'prefs.dart';
 import 'setup_wizard.dart';
 
-/// Verified Cloudflare accounts on this device; tap one to use it. Adding one runs the setup wizard,
-/// which deploys a fresh worker; Workers or Pages is picked in Settings → VLESS → Type.
+/// A single Cloudflare API token is verified and used for the VOIDCORE deployment.
 class CfAccountsPage extends StatelessWidget {
   const CfAccountsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
+    final saved = state.cfAccounts.isNotEmpty ? state.cfAccounts.first : null;
+    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Cloudflare Verification')),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const SetupWizard(addingAccount: true),
-          ),
-        ),
-        icon: const Icon(Symbols.add_rounded),
-        label: const Text('Add account'),
-      ),
-      // One settings card of accounts, like the Settings page.
       body: ListView(
-        padding: const EdgeInsets.only(top: 8, bottom: 96),
+        padding: const EdgeInsets.all(20),
         children: [
-          if (state.cfAccounts.isNotEmpty)
-            SettingsCard(
-              children: [
-                for (final a in state.cfAccounts) _AccountTile(account: a),
+          Card(child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(saved == null ? Symbols.key_rounded : Symbols.verified_user_rounded,
+                size: 38, color: saved == null ? theme.colorScheme.primary : Colors.green),
+              const SizedBox(height: 16),
+              Text(saved == null ? 'Connect Cloudflare' : 'Cloudflare token verified',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              Text(saved == null
+                ? 'Enter one Cloudflare API token. VOIDCORE will verify it and prepare your native connection.'
+                : 'One Cloudflare credential is active on this device. You can replace it by verifying another API token.'),
+              if (saved != null) ...[
+                const SizedBox(height: 16),
+                ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Symbols.cloud_done_rounded),
+                  title: Text(saved.name), subtitle: Text(saved.email), trailing: const Icon(Symbols.check_circle_rounded, color: Colors.green)),
               ],
-            ),
+              const SizedBox(height: 16),
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const SetupWizard(addingAccount: true))),
+                icon: const Icon(Symbols.verified_rounded),
+                label: Text(saved == null ? 'Verify API token' : 'Replace API token'),
+              )),
+            ]),
+          )),
+          const SizedBox(height: 12),
+          Text('Your API token is stored locally on this device. VOIDCORE does not upload it to the VOIDCORE account service.',
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         ],
       ),
-    );
-  }
-}
-
-class _AccountTile extends StatefulWidget {
-  final SavedCfAccount account;
-  const _AccountTile({required this.account});
-
-  @override
-  State<_AccountTile> createState() => _AccountTileState();
-}
-
-class _AccountTileState extends State<_AccountTile> {
-  SavedCfAccount get account => widget.account;
-
-  /// Cleaning up Cloudflare and removing the account.
-  bool _removing = false;
-
-  Future<bool> _confirm(String title, String body, String action) async =>
-      await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text(title),
-          content: Text(body),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: Text(action),
-            ),
-          ],
-        ),
-      ) ==
-      true;
-
-  /// Deletes the account's custom domains and workers from Cloudflare, then the account from
-  /// the app. If Cloudflare can't be cleaned up, offers to remove it from the app anyway.
-  Future<void> _remove() async {
-    final state = AppScope.read(context);
-    final messenger = ScaffoldMessenger.of(context);
-    if (!await _confirm(
-      'Remove account?',
-      'Custom domains and workers will be removed from the Cloudflare account ${account.label}, '
-          'and then the account itself will be removed from the app.',
-      'Remove',
-    )) {
-      return;
-    }
-    setState(() => _removing = true);
-    try {
-      await state.removeCfAccount(account);
-      messenger.showSnackBar(const SnackBar(content: Text('Account removed')));
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _removing = false);
-      final why = isNetworkError(e) ? "Can't reach Cloudflare." : (e is StateError ? e.message : '$e');
-      if (await _confirm(
-        "Couldn't clean up Cloudflare",
-        '$why\n\nRemove the account from the app anyway? Its workers and custom domains stay in '
-            'the Cloudflare account; delete them in the Cloudflare dashboard.',
-        'Remove anyway',
-      )) {
-        await state.removeCfAccount(account, cleanUp: false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final state = AppScope.of(context);
-    final theme = Theme.of(context);
-    final outdated = account.deployments
-        .where(AppState.updateAvailable)
-        .toList();
-    final busy = _removing || account.deployments.any((d) => state.isDeploying(account, d));
-    final scheme = theme.colorScheme;
-    final inUse = state.selected?.account.id == account.id;
-    // The account in use has the checked radio.
-    return ListTile(
-      onTap: inUse || busy ? null : () => state.selectAccount(account),
-      leading: Icon(
-        inUse
-            ? Symbols.radio_button_checked_rounded
-            : Symbols.radio_button_unchecked_rounded,
-        color: inUse ? scheme.primary : scheme.outline,
-      ),
-      title: Text(account.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: outdated.isEmpty
-          ? null
-          : Text(
-              'Worker update available',
-              style: TextStyle(color: scheme.primary),
-            ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (busy)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-            )
-          else if (outdated.isNotEmpty)
-            TextButton(
-              onPressed: () {
-                for (final d in outdated) {
-                  state.redeploy(account, d.type);
-                }
-              },
-              child: const Text('Update'),
-            ),
-          IconButton(
-            tooltip: 'Remove account',
-            icon: Icon(Symbols.delete_outline_rounded, color: scheme.error),
-            onPressed: busy ? null : _remove,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Opens Cloudflare's token page with the needed permissions pre-filled.
-Future<void> openTokenPage(BuildContext context) async {
-  final url = CloudflareApi.tokenCreationUrl();
-  final messenger = ScaffoldMessenger.of(context);
-  if (!await VpnChannel.openUrl(url)) {
-    await Clipboard.setData(ClipboardData(text: url));
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Link copied. Open it in your browser.')),
     );
   }
 }
