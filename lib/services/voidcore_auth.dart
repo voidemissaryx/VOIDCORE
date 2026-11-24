@@ -8,6 +8,7 @@ class VoidcoreAuthService {
   static const _access = 'voidcore.auth.access';
   static const _refresh = 'voidcore.auth.refresh';
   static const _storage = FlutterSecureStorage();
+  static const redirectUrl = 'voidcore://auth-callback';
   static bool get isConfigured => _url.startsWith('https://') && _key.isNotEmpty;
   String get _base => _url.replaceAll(RegExp(r'/+$'), '');
 
@@ -23,8 +24,24 @@ class VoidcoreAuthService {
   }
 
   Future<void> signUp({required String username, required String email, required String password}) async {
-    final d = await _post('/auth/v1/signup', {'email': email.trim(), 'password': password, 'data': {'username': username.trim()}});
+    final d = await _post('/auth/v1/signup?redirect_to=${Uri.encodeComponent(redirectUrl)}', {'email': email.trim(), 'password': password, 'data': {'username': username.trim()}});
     if (d['access_token'] is String) await _save(d);
+  }
+
+
+  /// Completes Supabase email confirmation links delivered to the native app scheme.
+  Future<void> verifyEmailLink(Uri uri) async {
+    final tokenHash = uri.queryParameters['token_hash'];
+    final type = uri.queryParameters['type'] ?? 'signup';
+    if (tokenHash == null || tokenHash.isEmpty) {
+      throw Exception('Verification link is incomplete. Request a new email link.');
+    }
+    final session = await _post('/auth/v1/verify', {
+      'token_hash': tokenHash,
+      'type': type,
+    });
+    if (session['access_token'] is String) await _save(session);
+    else throw Exception('Email verification succeeded, but no sign-in session was returned. Sign in again.');
   }
 
   Future<void> signIn({required String email, required String password}) async {
