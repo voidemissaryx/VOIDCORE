@@ -23,11 +23,27 @@ class VoidcoreAuthService {
     return null;
   }
 
+  /// Creates the user and asks Supabase Auth to send its email OTP.
   Future<void> signUp({required String username, required String email, required String password}) async {
-    final d = await _post('/auth/v1/signup?redirect_to=${Uri.encodeComponent(redirectUrl)}', {
-      'email': email.trim(), 'password': password, 'data': {'username': username.trim()}
+    await _post('/auth/v1/signup', {
+      'email': email.trim(),
+      'password': password,
+      'data': {'username': username.trim()},
     });
-    if (d['access_token'] is String) await _save(d);
+  }
+
+  /// Confirms the six-digit email code from the Supabase email template.
+  Future<void> verifySignupCode({required String email, required String code}) async {
+    final session = await _post('/auth/v1/verify', {
+      'email': email.trim(),
+      'token': code.trim(),
+      'type': 'signup',
+    });
+    if (session['access_token'] is String) {
+      await _save(session);
+      return;
+    }
+    throw Exception('Email verified, but no session was returned. Please sign in.');
   }
 
   Future<void> verifyEmailLink(Uri uri) async {
