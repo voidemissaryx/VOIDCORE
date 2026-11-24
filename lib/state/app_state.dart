@@ -1758,10 +1758,13 @@ class AppState extends ChangeNotifier {
     required String uuid,
     required List<Deployment> deployments,
   }) async {
-    final earlier = cfAccounts.where((a) => a.id == account.id).firstOrNull;
-    if (earlier != null) {
+    // VOIDCORE keeps exactly one Cloudflare credential/deployment set per device.
+    // Clean up the previous deployment set best-effort before replacing it.
+    for (final earlier in cfAccounts.where((a) => a.id != account.id).toList()) {
       await _deleteDeployments(earlier).catchError((_) {});
     }
+    final earlier = cfAccounts.where((a) => a.id == account.id).firstOrNull;
+    if (earlier != null) await _deleteDeployments(earlier).catchError((_) {});
     final saved = SavedCfAccount(
       id: account.id,
       name: account.name,
@@ -1772,10 +1775,7 @@ class AppState extends ChangeNotifier {
         ..sort((a, b) => a.type.index.compareTo(b.type.index)),
     );
     final wasUsable = selected != null && selected!.account.id != account.id;
-    await _saveAccounts([
-      ...cfAccounts.where((a) => a.id != account.id),
-      saved,
-    ]);
+    await _saveAccounts([saved]);
     if (!wasUsable) selectDeployment(saved, saved.deployments.first);
   }
 
