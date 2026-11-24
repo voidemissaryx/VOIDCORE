@@ -9,7 +9,19 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return reply({ error: "Method not allowed" }, 405);
   const authorization = req.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) return reply({ error: "Authentication required" }, 401);
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  // Prefer Supabase's current named secret-key environment variable.
+  // Fall back to the legacy service-role variable for older projects.
+  let serviceKey: string | undefined;
+  const secretKeysRaw = Deno.env.get("SUPABASE_SECRET_KEYS");
+  if (secretKeysRaw) {
+    try {
+      const secretKeys = JSON.parse(secretKeysRaw) as Record<string, string>;
+      serviceKey = secretKeys.default;
+    } catch {
+      return reply({ error: "Admin service secret configuration is invalid" }, 500);
+    }
+  }
+  serviceKey ??= Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!serviceKey) return reply({ error: "Admin service is not configured" }, 500);
   const admin = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey, { auth: { persistSession: false } });
   const { data: { user }, error: authError } = await admin.auth.getUser(authorization.slice(7));
