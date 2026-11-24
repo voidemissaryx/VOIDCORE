@@ -22,7 +22,7 @@ The migration creates:
 ## 3. Configure email verification
 
 In Authentication → Providers → Email, enable email/password sign-in and email confirmation.
-Configure the SMTP provider and allowed redirect URLs in Authentication → URL Configuration.
+Configure the SMTP provider and add `voidcore://auth-callback` to the Redirect URLs allow-list in Authentication → URL Configuration. The Flutter Android app registers this URI scheme and completes the Supabase `token_hash` verification inside the app; do not use `http://localhost:3000` as the redirect target.
 The app must not treat a newly registered account as verified until Supabase reports
 `email_confirmed_at`.
 
