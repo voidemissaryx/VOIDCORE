@@ -12,6 +12,7 @@ import '../services/net_errors.dart';
 import '../services/vpn_channel.dart';
 import '../state/app_state.dart';
 import 'cf_accounts_page.dart';
+import 'voidcore_account_page.dart';
 
 const _signUpUrl = 'https://dash.cloudflare.com/sign-up';
 
@@ -296,6 +297,14 @@ class _AccountStep extends StatelessWidget {
         ),
         SizedBox(height: 24),
         Text('Do you have a Cloudflare account with a verified email?'),
+        SizedBox(height: 12),
+        TextButton.icon(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()),
+          ),
+          icon: Icon(Symbols.person_rounded),
+          label: Text('Create or sign in to a VOIDCORE account'),
+        ),
       ],
     );
   }
