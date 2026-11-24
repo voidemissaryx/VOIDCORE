@@ -61,7 +61,24 @@ class VoidcoreAuthService {
   }
 
   Future<void> signIn({required String email, required String password}) async {
-    final d = await _post('/auth/v1/token?grant_type=password', {'email': email.trim(), 'password': password});
+    late final Map<String, dynamic> d;
+    try {
+      d = await _post('/auth/v1/token?grant_type=password', {
+        'email': email.trim(),
+        'password': password,
+      });
+    } catch (error) {
+      final message = error.toString().toLowerCase();
+      if (message.contains('banned') ||
+          message.contains('suspended') ||
+          message.contains('user is banned') ||
+          message.contains('user_banned')) {
+        throw Exception(
+          'Your account is currently suspended. Access to VOIDCORE has been temporarily restricted by an administrator. If you believe this is a mistake, please contact VOIDCORE Support.',
+        );
+      }
+      rethrow;
+    }
     final user = d['user'];
     if (user is Map && user['email_confirmed_at'] == null) {
       throw Exception('Email is not verified. Verify your address, then sign in again.');
