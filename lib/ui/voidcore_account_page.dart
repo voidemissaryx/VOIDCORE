@@ -1,7 +1,4 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../services/voidcore_auth.dart';
@@ -14,7 +11,7 @@ class VoidcoreAccountPage extends StatefulWidget {
   State<VoidcoreAccountPage> createState() => _VoidcoreAccountPageState();
 }
 
-class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> {
+class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsBindingObserver {
   final _auth = VoidcoreAuthService();
   final _form = GlobalKey<FormState>();
   final _username = TextEditingController();
@@ -24,14 +21,12 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> {
   bool _creating = true, _busy = false, _hide = true;
   String? _message;
   Map<String, dynamic>? _user;
-  StreamSubscription<dynamic>? _authLinkSubscription;
-  final Set<String> _handledLinks = {};
 
   @override
   void initState() {
     super.initState();
     _load();
-    _listenForVerificationLinks();
+    WidgetsBinding.instance.addObserver(this);
   }
 
   Future<void> _load() async {
@@ -40,40 +35,14 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> {
   }
 
 
-  Future<void> _listenForVerificationLinks() async {
-    const events = EventChannel('voidcore/auth-links');
-    _authLinkSubscription = events.receiveBroadcastStream().listen((value) {
-      if (value is String) _handleVerificationLink(value);
-    }, onError: (_) {});
-    try {
-      const initial = MethodChannel('voidcore/auth-link-methods');
-      final value = await initial.invokeMethod<String>('getInitialAuthLink');
-      if (value != null) _handleVerificationLink(value);
-    } catch (_) {}
-  }
-
-  Future<void> _handleVerificationLink(String rawLink) async {
-    if (!_handledLinks.add(rawLink)) return;
-    final uri = Uri.tryParse(rawLink);
-    if (uri == null || uri.scheme != 'voidcore' || uri.host != 'auth-callback') return;
-    if (mounted) setState(() { _busy = true; _message = 'Verifying your email securely…'; });
-    try {
-      await _auth.verifyEmailLink(uri);
-      final user = await _auth.currentUser();
-      if (mounted) setState(() {
-        _user = user;
-        _message = '🎉 Email verified! Your VOIDCORE account is now active.';
-      });
-    } catch (error) {
-      if (mounted) setState(() => _message = error.toString().replaceFirst('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
   }
 
   @override
   void dispose() {
-    _authLinkSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _username.dispose();
     _email.dispose();
     _password.dispose();
