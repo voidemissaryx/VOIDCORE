@@ -1774,9 +1774,8 @@ class AppState extends ChangeNotifier {
       deployments: [...deployments]
         ..sort((a, b) => a.type.index.compareTo(b.type.index)),
     );
-    final wasUsable = selected != null && selected!.account.id != account.id;
     await _saveAccounts([saved]);
-    if (!wasUsable) selectDeployment(saved, saved.deployments.first);
+    selectDeployment(saved, saved.deployments.first);
   }
 
   /// Deletes [deployments] of [accountId] from Cloudflare, custom domains first (see
