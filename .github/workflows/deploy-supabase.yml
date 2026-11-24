@@ -26,4 +26,4 @@ jobs:
             echo "::error::Missing GitHub Actions secret SUPABASE_ACCESS_TOKEN"
             exit 1
           fi
-          supabase functions deploy admin-users --project-ref fbbnyljizuddnyfslerv
+          supabase functions deploy admin-users --project-ref fbbnyljizuddnyfslerv --yes
