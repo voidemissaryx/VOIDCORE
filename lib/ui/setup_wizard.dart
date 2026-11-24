@@ -775,18 +775,6 @@ class _InstallStepState extends State<_InstallStep> {
                     'then WARP and MASQUE accounts are registered.',
         ),
         const SizedBox(height: 16),
-        if (accounts.length > 1 && !_started) ...[
-          DropdownMenu<CfAccount>(
-            initialSelection: _account,
-            expandedInsets: EdgeInsets.zero,
-            label: const Text('Cloudflare account'),
-            dropdownMenuEntries: [for (final a in accounts) DropdownMenuEntry(value: a, label: a.name)],
-            onSelected: (a) {
-              if (a != null) setState(() => _account = a);
-            },
-          ),
-          const SizedBox(height: 8),
-        ],
         for (final MapEntry(key: item, value: row) in _rows.entries) _rowTile(context, item, row),
         if (_torProgress case final progress?) ...[
           const SizedBox(height: 12),
