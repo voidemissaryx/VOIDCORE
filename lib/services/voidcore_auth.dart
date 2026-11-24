@@ -56,10 +56,11 @@ class VoidcoreAuthService {
   Future<void> resendVerification(String email) async =>
       _post('/auth/v1/resend', {'type': 'signup', 'email': email.trim()});
 
-  Future<Map<String, dynamic>> updateUser(Map<String, dynamic> changes) async {
+  Future<Map<String, dynamic>> updateUser(Map<String, dynamic> changes, {String? redirectTo}) async {
     final token = await _storage.read(key: _access);
     if (token == null) throw Exception('Sign in to edit your account.');
-    final r = await http.put(Uri.parse('$_base/auth/v1/user'),
+    final uri = Uri.parse('$_base/auth/v1/user').replace(queryParameters: redirectTo == null ? null : {'redirect_to': redirectTo});
+    final r = await http.put(uri,
       headers: {'apikey': _key, 'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
       body: jsonEncode(changes));
     final d = _map(r.body);
@@ -74,7 +75,7 @@ class VoidcoreAuthService {
   }
 
   Future<void> updateEmail(String email) async {
-    await updateUser({'email': email.trim(), 'email_redirect_to': redirectUrl});
+    await updateUser({'email': email.trim()}, redirectTo: redirectUrl);
   }
 
   Future<void> updatePassword(String password) async {
