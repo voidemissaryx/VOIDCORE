@@ -25,13 +25,14 @@ typedef CheckedToken = ({String token, String email, List<CfAccount> accounts});
 /// by Cloudflare accounts → Add account ([addingAccount]); every run deploys a fresh worker.
 class SetupWizard extends StatefulWidget {
   final bool addingAccount;
-  const SetupWizard({super.key, this.addingAccount = false});
+  final CheckedToken? initialToken;
+  const SetupWizard({super.key, this.addingAccount = false, this.initialToken});
 
   @override
   State<SetupWizard> createState() => _SetupWizardState();
 }
 
-enum _Step { voidcore, account, token, install, done }
+enum _Step { voidcore, install, done }
 
 class _SetupWizardState extends State<SetupWizard> {
   _Step _step = _Step.voidcore;
@@ -40,6 +41,11 @@ class _SetupWizardState extends State<SetupWizard> {
   bool _signingUp = false;
 
   CheckedToken? _token;
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialToken != null) { _token = widget.initialToken; _step = _Step.install; }
+  }
 
   /// Installing has started: no going back to the token.
   bool _installing = false;
@@ -49,19 +55,19 @@ class _SetupWizardState extends State<SetupWizard> {
 
   void _go(_Step step) => setState(() => _step = step);
 
-  void _back() => switch (_step) {
-    _Step.voidcore => null,
-    _Step.account => setState(() => _signingUp = false),
-    _Step.token => _go(_Step.account),
-    _Step.install => _installing ? null : _go(_Step.token),
-    _Step.done => null,
-  };
+  Future<void> _openCloudflareVerification() async {
+    final token = await Navigator.of(context).push<CheckedToken>(MaterialPageRoute(builder: (_) => const CfAccountsPage(selectForSetup: true)));
+    if (!mounted || token == null) return;
+    setState(() { _token = token; _step = _Step.install; });
+  }
+
+  void _back() {}
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stepNumber = _step.index + 1;
-    final canGoBack = _step != _Step.done && _step != _Step.voidcore && !_installing && (_step != _Step.account || _signingUp);
+    final canGoBack = false;
 
     return PopScope(
       // System back goes to the previous step instead of closing the app.
@@ -77,7 +83,7 @@ class _SetupWizardState extends State<SetupWizard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (_step != _Step.done) ...[
-                  Text('Step $stepNumber of 4', style: theme.textTheme.labelLarge),
+                  Text('Step $stepNumber of 3', style: theme.textTheme.labelLarge),
                   const SizedBox(height: 8),
                   _StepBar(current: _step.index),
                   const SizedBox(height: 24),
@@ -95,23 +101,7 @@ class _SetupWizardState extends State<SetupWizard> {
                     child: KeyedSubtree(
                       key: ValueKey(_step),
                       child: switch (_step) {
-                        _Step.voidcore => _VoidcoreSetupStep(onContinue: () => _go(_Step.account)),
-                        _Step.account => _AccountStep(
-                          signingUp: _signingUp,
-                          onNo: () async {
-                            setState(() => _signingUp = true);
-                            await _openUrl(context, _signUpUrl);
-                          },
-                          onYes: () => _go(_Step.token),
-                          onBack: _back,
-                        ),
-                        _Step.token => _TokenStep(
-                          onBack: _back,
-                          onNext: (token) {
-                            _token = token;
-                            _go(_Step.install);
-                          },
-                        ),
+                        _Step.voidcore => _VoidcoreSetupStep(onContinue: _openCloudflareVerification),
                         _Step.install => _InstallStep(
                           token: _token!,
                           addingAccount: widget.addingAccount,
