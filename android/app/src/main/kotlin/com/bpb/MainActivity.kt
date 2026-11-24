@@ -35,6 +35,7 @@ class MainActivity : FlutterActivity() {
         private const val METHOD_CHANNEL = "bpb/core"
         private const val EVENT_CHANNEL = "bpb/state"
         private const val SCANNER_EVENT_CHANNEL = "bpb/scanner"
+        private const val AUTH_LINK_CHANNEL = "voidcore/auth-links"
         private const val REQUEST_VPN = 0x0B9B
         private const val REQUEST_NOTIFICATIONS = 0x0B9C
         private const val REQUEST_PICK_FILE = 0x0B9D
@@ -49,6 +50,7 @@ class MainActivity : FlutterActivity() {
     private val scannerPolling = AtomicBoolean(false)
     private val activityDestroyed = AtomicBoolean(false)
     @Volatile private var scannerEventSink: EventChannel.EventSink? = null
+    @Volatile private var authLinkSink: EventChannel.EventSink? = null
     private val scannerBridge by lazy { Xray.newScannerBridge() }
     private val mainHandler = Handler(Looper.getMainLooper())
     private var pendingPrepare: MethodChannel.Result? = null
@@ -63,6 +65,20 @@ class MainActivity : FlutterActivity() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
 
         MethodChannel(messenger, METHOD_CHANNEL).setMethodCallHandler(::onMethodCall)
+        MethodChannel(messenger, "voidcore/auth-link-methods").setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getInitialAuthLink" -> result.success(intent?.dataString)
+                else -> result.notImplemented()
+            }
+        }
+        EventChannel(messenger, AUTH_LINK_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
+                authLinkSink = events
+                intent?.dataString?.let { events.success(it) }
+            }
+            override fun onCancel(arguments: Any?) { authLinkSink = null }
+        })
+
 
         EventChannel(messenger, EVENT_CHANNEL).setStreamHandler(object : EventChannel.StreamHandler {
             override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
@@ -122,6 +138,13 @@ class MainActivity : FlutterActivity() {
                 scannerPolling.set(false)
             }
         })
+    }
+
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.dataString?.let { authLinkSink?.success(it) }
     }
 
     override fun onDestroy() {
