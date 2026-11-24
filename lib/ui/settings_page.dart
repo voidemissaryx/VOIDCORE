@@ -1163,7 +1163,7 @@ String _fragmentSummary(List<Fragment> fragments) =>
     '${fragments.length} fragment${fragments.length == 1 ? '' : 's'}';
 
 /// Which of the selected account's deployments (Workers or Pages) Worker mode connects to; the
-/// VLESS settings below are its own. The account is picked in Cloudflare accounts.
+/// VLESS settings below are its own. The API token is verified from Account → Cloudflare Verification.
 class _DeploymentTile extends StatelessWidget {
   const _DeploymentTile();
 
@@ -1176,7 +1176,7 @@ class _DeploymentTile extends StatelessWidget {
       return const ListTile(
         leading: Icon(Symbols.deployed_code_rounded),
         title: Text('Type'),
-        subtitle: Text('None. Add a Cloudflare account below.'),
+        subtitle: Text('None. Verify a Cloudflare API token from your VOIDCORE Account.'),
       );
     }
     final key = AppState.deploymentKey(s.account, s.deployment);
