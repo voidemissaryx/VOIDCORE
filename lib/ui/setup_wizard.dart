@@ -271,6 +271,26 @@ class _VoidcoreSetupStepState extends State<_VoidcoreSetupStep> {
   String? _message;
 
   @override
+  void initState() {
+    super.initState();
+    _restoreExistingSession();
+  }
+
+  Future<void> _restoreExistingSession() async {
+    try {
+      final user = await _auth.currentUser();
+      if (mounted && user != null && user['email_confirmed_at'] != null) {
+        setState(() {
+          _verified = true;
+          _message = 'You are already signed in with a verified VOIDCORE account.';
+        });
+      }
+    } catch (_) {
+      // Keep the signup screen available if the saved session cannot be restored.
+    }
+  }
+
+  @override
   void dispose() {
     _username.dispose();
     _email.dispose();
