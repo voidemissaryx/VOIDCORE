@@ -318,7 +318,7 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
               if (_message != null && _user != null) Padding(padding: const EdgeInsets.only(top: 12),
                 child: Text(_message!, textAlign: TextAlign.center)),
             ]),
-      )))),
+      ))),
     );
   }
 }
