@@ -6,9 +6,8 @@
 name: Release
 
 on:
+  # Releases run only for version tags or an explicit manual dispatch.
   push:
-    branches:
-      - default
     tags:
       - 'v*'
   workflow_dispatch:
