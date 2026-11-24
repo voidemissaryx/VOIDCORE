@@ -2,11 +2,23 @@ name: Android CI
 run-name: VOIDCORE 1.4.7 · Android test and APK build
 
 on:
-  # Run only when manually requested; ordinary commits must not start builds.
   workflow_dispatch:
+  push:
+    branches:
+      - default
+    paths:
+      - 'lib/**'
+      - 'android/**'
+      - 'assets/**'
+      - 'scanner/**'
+      - 'scripts/**'
+      - 'worker/**'
+      - 'pubspec.yaml'
+      - 'pubspec.lock'
+      - '.github/workflows/android-ci.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test-and-build:
@@ -80,15 +92,10 @@ jobs:
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY"
 
-      - name: Publish APK to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload release APK
+        uses: actions/upload-artifact@v4
         with:
-          tag_name: v1.4.2
-          target_commitish: ${{ github.sha }}
-          name: VOIDCORE 1.4.2
-          body: |
-            ## VOIDCORE 1.4.2
-
-            Android release build for VOIDCORE VPN.
-          overwrite_files: true
-          files: build/app/outputs/flutter-apk/app-release.apk
+          name: VOIDCORE-1.4.7-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 14
