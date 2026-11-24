@@ -16,6 +16,7 @@ import 'status_card.dart';
 import 'update_banner.dart';
 import 'v2rayng_page.dart';
 import 'voidcore_account_page.dart';
+import '../services/voidcore_auth.dart';
 
 enum _AppSection { voidCore, v2rayNg }
 
@@ -50,25 +51,75 @@ class _HomePageState extends State<HomePage> {
                 ]),
               ),
               const Divider(height: 1),
+              const Spacer(),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
-                child: Card(
-                  margin: EdgeInsets.zero,
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundColor: scheme.primaryContainer,
-                      child: Icon(Symbols.person_rounded, color: scheme.onPrimaryContainer),
-                    ),
-                    title: const Text('VOIDCORE Account'),
-                    subtitle: const Text('Sign in or create your account'),
-                    trailing: const Icon(Symbols.chevron_right_rounded),
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) => const VoidcoreAccountPage(),
-                      ));
-                    },
-                  ),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                child: FutureBuilder<Map<String, dynamic>?>(
+                  future: VoidcoreAuthService().currentUser(),
+                  builder: (context, snapshot) {
+                    final user = snapshot.data;
+                    final metadata = user?['user_metadata'];
+                    final username = metadata is Map
+                        ? (metadata['username'] ?? 'VOIDCORE User').toString()
+                        : 'VOIDCORE User';
+                    final email = (user?['email'] ?? 'Sign in to sync your account').toString();
+                    final verified = user?['email_confirmed_at'] != null;
+                    return Card(
+                      margin: EdgeInsets.zero,
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            contentPadding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+                            leading: CircleAvatar(
+                              radius: 27,
+                              backgroundColor: const Color(0xFF251642),
+                              child: const Icon(Symbols.person_rounded, size: 31, color: Color(0xFFC49AFF)),
+                            ),
+                            title: Text(username, maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(email, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                const SizedBox(height: 6),
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    color: verified ? Colors.green.withValues(alpha: .14) : scheme.surfaceContainerHighest,
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    child: Text(user == null ? 'VOIDCORE Account' : verified ? 'VERIFIED ACCOUNT' : 'EMAIL NOT VERIFIED',
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                                        color: verified ? Colors.green : scheme.onSurfaceVariant)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()))
+                                .then((_) { if (mounted) setState(() {}); });
+                            },
+                          ),
+                          const Divider(height: 1),
+                          ListTile(
+                            dense: true,
+                            leading: const Icon(Symbols.manage_accounts_rounded),
+                            title: const Text('My Account'),
+                            trailing: const Icon(Symbols.chevron_right_rounded),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()))
+                                .then((_) { if (mounted) setState(() {}); });
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
               ),
               Padding(
@@ -89,7 +140,6 @@ class _HomePageState extends State<HomePage> {
                 selected: _section == _AppSection.v2rayNg,
                 onTap: () { setState(() => _section = _AppSection.v2rayNg); Navigator.pop(context); },
               ),
-              const Spacer(),
             ],
           ),
         ),
