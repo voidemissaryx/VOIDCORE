@@ -1,5 +1,5 @@
 name: Android CI
-run-name: VOIDCORE 1.4.2 · Android test and APK build
+run-name: VOIDCORE 1.4.7 · Android test and APK build
 
 on:
   # Run only when manually requested; ordinary commits must not start builds.
