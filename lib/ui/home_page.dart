@@ -15,6 +15,7 @@ import 'theme.dart';
 import 'status_card.dart';
 import 'update_banner.dart';
 import 'v2rayng_page.dart';
+import 'voidcore_account_page.dart';
 
 enum _AppSection { voidCore, v2rayNg }
 
@@ -49,6 +50,27 @@ class _HomePageState extends State<HomePage> {
                 ]),
               ),
               const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: scheme.primaryContainer,
+                      child: Icon(Symbols.person_rounded, color: scheme.onPrimaryContainer),
+                    ),
+                    title: const Text('VOIDCORE Account'),
+                    subtitle: const Text('Sign in or create your account'),
+                    trailing: const Icon(Symbols.chevron_right_rounded),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => const VoidcoreAccountPage(),
+                      ));
+                    },
+                  ),
+                ),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
                 child: Text('WORKSPACES', style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 1.1)),
