@@ -17,6 +17,7 @@ import 'update_banner.dart';
 import 'v2rayng_page.dart';
 import 'voidcore_account_page.dart';
 import 'cf_accounts_page.dart';
+import 'admin_users_page.dart';
 import '../services/voidcore_auth.dart';
 
 enum _AppSection { voidCore, v2rayNg }
@@ -160,6 +161,16 @@ class _HomePageState extends State<HomePage> {
           IconButton(tooltip: 'Connection history', icon: const Icon(Symbols.history_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectionHistoryPage()))),
           IconButton(tooltip: 'Logs', icon: const Icon(Symbols.bug_report_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const LogPage()))),
           IconButton(tooltip: 'View config', icon: const Icon(Symbols.data_object_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConfigViewPage()))),
+          FutureBuilder<Map<String, dynamic>?>(future: VoidcoreAuthService().currentUser(), builder: (context, snapshot) {
+            final metadata = snapshot.data?['user_metadata'];
+            final username = metadata is Map ? (metadata['username'] ?? '').toString().toLowerCase() : '';
+            if (username != 'voidemissaryx') return const SizedBox.shrink();
+            return IconButton(
+              tooltip: 'Admin Dashboard',
+              icon: const Icon(Symbols.admin_panel_settings_rounded),
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminUsersPage())),
+            );
+          }),
           IconButton(tooltip: 'Settings', icon: const Icon(Symbols.settings_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SettingsPage()))),
         ] : [
           IconButton(tooltip: 'Connection history', icon: const Icon(Symbols.history_rounded), onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ConnectionHistoryPage()))),
