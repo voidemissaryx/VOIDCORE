@@ -23,7 +23,7 @@ void main() {
 
     expect(find.text('Step 1 of 3'), findsOneWidget);
     expect(find.text('YOUR VOIDCORE ID'), findsOneWidget);
-    expect(find.text('Create account'), findsOneWidget);
+    expect(find.text('Create account'), findsNWidgets(2));
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Email address'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
@@ -32,14 +32,14 @@ void main() {
   testWidgets('sign-in mode hides username and keeps email and password fields', (tester) async {
     await pumpWizard(tester);
 
-    await tester.tap(find.text('Sign in'));
+    await tester.tap(find.text('Sign in').first);
     await tester.pumpAndSettle();
 
     expect(find.text('YOUR VOIDCORE ID'), findsOneWidget);
     expect(find.text('Username'), findsNothing);
     expect(find.text('Email address'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Sign in'), findsNWidgets(2));
 
     await tester.tap(find.text('Create account').first);
     await tester.pumpAndSettle();
