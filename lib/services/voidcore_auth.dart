@@ -24,24 +24,24 @@ class VoidcoreAuthService {
   }
 
   Future<void> signUp({required String username, required String email, required String password}) async {
-    final d = await _post('/auth/v1/signup?redirect_to=${Uri.encodeComponent(redirectUrl)}', {'email': email.trim(), 'password': password, 'data': {'username': username.trim()}});
+    final d = await _post('/auth/v1/signup?redirect_to=${Uri.encodeComponent(redirectUrl)}', {
+      'email': email.trim(), 'password': password, 'data': {'username': username.trim()}
+    });
     if (d['access_token'] is String) await _save(d);
   }
 
-
-  /// Completes Supabase email confirmation links delivered to the native app scheme.
   Future<void> verifyEmailLink(Uri uri) async {
     final tokenHash = uri.queryParameters['token_hash'];
     final type = uri.queryParameters['type'] ?? 'signup';
     if (tokenHash == null || tokenHash.isEmpty) {
       throw Exception('Verification link is incomplete. Request a new email link.');
     }
-    final session = await _post('/auth/v1/verify', {
-      'token_hash': tokenHash,
-      'type': type,
-    });
-    if (session['access_token'] is String) await _save(session);
-    else throw Exception('Email verification succeeded, but no sign-in session was returned. Sign in again.');
+    final session = await _post('/auth/v1/verify', {'token_hash': tokenHash, 'type': type});
+    if (session['access_token'] is String) {
+      await _save(session);
+    } else {
+      throw Exception('Email verification succeeded. Please sign in to continue.');
+    }
   }
 
   Future<void> signIn({required String email, required String password}) async {
@@ -55,6 +55,31 @@ class VoidcoreAuthService {
 
   Future<void> resendVerification(String email) async =>
       _post('/auth/v1/resend', {'type': 'signup', 'email': email.trim()});
+
+  Future<Map<String, dynamic>> updateUser(Map<String, dynamic> changes) async {
+    final token = await _storage.read(key: _access);
+    if (token == null) throw Exception('Sign in to edit your account.');
+    final r = await http.put(Uri.parse('$_base/auth/v1/user'),
+      headers: {'apikey': _key, 'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+      body: jsonEncode(changes));
+    final d = _map(r.body);
+    if (r.statusCode < 200 || r.statusCode >= 300) {
+      throw Exception((d['msg'] ?? d['message'] ?? d['error_description'] ?? d['error'] ?? 'Could not update account').toString());
+    }
+    return d;
+  }
+
+  Future<void> updateUsername(String username) async {
+    await updateUser({'data': {'username': username.trim()}});
+  }
+
+  Future<void> updateEmail(String email) async {
+    await updateUser({'email': email.trim(), 'email_redirect_to': redirectUrl});
+  }
+
+  Future<void> updatePassword(String password) async {
+    await updateUser({'password': password});
+  }
 
   Future<void> signOut() async {
     final token = await _storage.read(key: _access);
