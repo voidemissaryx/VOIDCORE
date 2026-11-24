@@ -290,20 +290,20 @@ class _AccountStep extends StatelessWidget {
           child: FilledButton(onPressed: onYes, child: const Text('Yes')),
         ),
       ],
-      children: const [
-        Text(
+      children: [
+        const Text(
           "VOIDCORE runs your own private proxy server on Cloudflare's free plan. "
           'Setting it up takes three steps and a couple of minutes.',
         ),
-        SizedBox(height: 24),
-        Text('Do you have a Cloudflare account with a verified email?'),
-        SizedBox(height: 12),
+        const SizedBox(height: 24),
+        const Text('Do you have a Cloudflare account with a verified email?'),
+        const SizedBox(height: 12),
         TextButton.icon(
           onPressed: () => Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()),
           ),
-          icon: Icon(Symbols.person_rounded),
-          label: Text('Create or sign in to a VOIDCORE account'),
+          icon: const Icon(Symbols.person_rounded),
+          label: const Text('Create or sign in to a VOIDCORE account'),
         ),
       ],
     );
