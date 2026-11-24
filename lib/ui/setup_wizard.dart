@@ -50,6 +50,7 @@ class _SetupWizardState extends State<SetupWizard> {
   void _go(_Step step) => setState(() => _step = step);
 
   void _back() => switch (_step) {
+    _Step.voidcore => null,
     _Step.account => setState(() => _signingUp = false),
     _Step.token => _go(_Step.account),
     _Step.install => _installing ? null : _go(_Step.token),
@@ -60,7 +61,7 @@ class _SetupWizardState extends State<SetupWizard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stepNumber = _step.index + 1;
-    final canGoBack = _step != _Step.done && !_installing && (_step != _Step.account || _signingUp);
+    final canGoBack = _step != _Step.done && _step != _Step.voidcore && !_installing && (_step != _Step.account || _signingUp);
 
     return PopScope(
       // System back goes to the previous step instead of closing the app.
@@ -94,6 +95,7 @@ class _SetupWizardState extends State<SetupWizard> {
                     child: KeyedSubtree(
                       key: ValueKey(_step),
                       child: switch (_step) {
+                        _Step.voidcore => _VoidcoreSetupStep(onContinue: () => _go(_Step.account)),
                         _Step.account => _AccountStep(
                           signingUp: _signingUp,
                           onNo: () async {
