@@ -51,79 +51,8 @@ class _HomePageState extends State<HomePage> {
                 ]),
               ),
               const Divider(height: 1),
-              const Spacer(),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                child: FutureBuilder<Map<String, dynamic>?>(
-                  future: VoidcoreAuthService().currentUser(),
-                  builder: (context, snapshot) {
-                    final user = snapshot.data;
-                    final metadata = user?['user_metadata'];
-                    final username = metadata is Map
-                        ? (metadata['username'] ?? 'VOIDCORE User').toString()
-                        : 'VOIDCORE User';
-                    final email = (user?['email'] ?? 'Sign in to sync your account').toString();
-                    final verified = user?['email_confirmed_at'] != null;
-                    return Card(
-                      margin: EdgeInsets.zero,
-                      clipBehavior: Clip.antiAlias,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ListTile(
-                            contentPadding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
-                            leading: CircleAvatar(
-                              radius: 27,
-                              backgroundColor: const Color(0xFF251642),
-                              child: const Icon(Symbols.person_rounded, size: 31, color: Color(0xFFC49AFF)),
-                            ),
-                            title: Text(username, maxLines: 1, overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(email, maxLines: 1, overflow: TextOverflow.ellipsis),
-                                const SizedBox(height: 6),
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    color: verified ? Colors.green.withValues(alpha: .14) : scheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    child: Text(user == null ? 'VOIDCORE Account' : verified ? 'VERIFIED ACCOUNT' : 'EMAIL NOT VERIFIED',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                                        color: verified ? Colors.green : scheme.onSurfaceVariant)),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()))
-                                .then((_) { if (mounted) setState(() {}); });
-                            },
-                          ),
-                          const Divider(height: 1),
-                          ListTile(
-                            dense: true,
-                            leading: const Icon(Symbols.manage_accounts_rounded),
-                            title: const Text('My Account'),
-                            trailing: const Icon(Symbols.chevron_right_rounded),
-                            onTap: () {
-                              Navigator.pop(context);
-                              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()))
-                                .then((_) { if (mounted) setState(() {}); });
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 16, 12, 6),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
                 child: Text('WORKSPACES', style: theme.textTheme.labelSmall?.copyWith(color: scheme.onSurfaceVariant, letterSpacing: 1.1)),
               ),
               _WorkspaceButton(
@@ -139,6 +68,63 @@ class _HomePageState extends State<HomePage> {
                 icon: Symbols.hub_rounded,
                 selected: _section == _AppSection.v2rayNg,
                 onTap: () { setState(() => _section = _AppSection.v2rayNg); Navigator.pop(context); },
+              ),
+              const Spacer(),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+                child: FutureBuilder<Map<String, dynamic>?>(
+                  future: VoidcoreAuthService().currentUser(),
+                  builder: (context, snapshot) {
+                    final user = snapshot.data;
+                    final metadata = user?['user_metadata'];
+                    final username = metadata is Map
+                        ? (metadata['username'] ?? 'VOIDCORE User').toString()
+                        : 'VOIDCORE Account';
+                    final email = (user?['email'] ?? 'Tap to sign in').toString();
+                    final verified = user?['email_confirmed_at'] != null;
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => const VoidcoreAccountPage()))
+                            .then((_) { if (mounted) setState(() {}); });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                          child: Row(children: [
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: const Color(0xFF251642),
+                              child: const Icon(Symbols.person_rounded, size: 31, color: Color(0xFFC49AFF)),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(username, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 3),
+                                Text(email, maxLines: 1, overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                                if (user != null) ...[
+                                  const SizedBox(height: 6),
+                                  Text(verified ? 'VERIFIED ACCOUNT' : 'EMAIL NOT VERIFIED',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800,
+                                      color: verified ? Colors.green : scheme.tertiary)),
+                                ],
+                              ],
+                            )),
+                            Icon(Symbols.chevron_right_rounded, color: scheme.onSurfaceVariant),
+                          ]),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
