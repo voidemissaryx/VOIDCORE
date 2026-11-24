@@ -40,3 +40,28 @@ the existing on-device Cloudflare operations. Do not store it in profiles or exp
 
 Configure the Supabase project URL and publishable/anon key through build-time configuration.
 Only the publishable/anon key belongs in the client; never use the service-role key.
+
+
+## 6. VOIDCORE administrator dashboard
+
+Apply `migrations/202611240003_voidcore_admin.sql` in the Supabase SQL Editor. After the
+owner has created and verified the account whose username is `voidemissaryx`, promote that
+specific profile by running:
+
+```sql
+update public.profiles
+set role = 'admin'
+where lower(username) = 'voidemissaryx';
+```
+
+Deploy the protected Edge Function:
+
+```sh
+supabase functions deploy admin-users
+```
+
+Keep JWT verification enabled. The function uses the server-side
+`SUPABASE_SERVICE_ROLE_KEY` environment variable and checks `profiles.role = 'admin'`
+for every request. Never add the service-role key to Flutter or GitHub build variables.
+The admin dashboard lists accounts vertically and supports disable/enable, edit username/email/
+password, and permanent deletion. Admin accounts are protected from these actions.
