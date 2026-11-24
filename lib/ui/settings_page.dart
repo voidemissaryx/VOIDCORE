@@ -11,7 +11,6 @@ import '../services/updates.dart';
 import '../services/vpn_channel.dart';
 import '../services/xray_config.dart';
 import '../state/app_state.dart';
-import 'cf_accounts_page.dart';
 import 'cloudflare_scanner_page.dart';
 import 'dns_page.dart';
 import 'fragments_page.dart';
@@ -351,8 +350,6 @@ class SettingsPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          SettingsCard(children: [const _CloudflareAccountsTile()]),
-
           const SectionHeader('Masque'),
           SettingsCard(
             children: [
@@ -1254,27 +1251,6 @@ class _DeploymentTile extends StatelessWidget {
               final d = picked == null ? null : s.account.deployment(picked);
               if (d != null) state.selectDeployment(s.account, d);
             },
-    );
-  }
-}
-
-/// Opens the Cloudflare accounts (like the WARP account tile in the WARP section).
-class _CloudflareAccountsTile extends StatelessWidget {
-  const _CloudflareAccountsTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final account = AppScope.of(context).selected?.account;
-    return ListTile(
-      leading: const Icon(Symbols.cloud_rounded),
-      title: const Text('Cloudflare accounts'),
-      subtitle: account == null
-          ? null
-          : Text(account.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: const Icon(Symbols.chevron_right_rounded),
-      onTap: () =>
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const CfAccountsPage())),
     );
   }
 }
