@@ -10,7 +10,7 @@ import '../state/app_state.dart';
 import 'prefs.dart';
 import 'setup_wizard.dart';
 
-/// The Cloudflare accounts on this device; tap one to use it. Adding one runs the setup wizard,
+/// Verified Cloudflare accounts on this device; tap one to use it. Adding one runs the setup wizard,
 /// which deploys a fresh worker; Workers or Pages is picked in Settings → VLESS → Type.
 class CfAccountsPage extends StatelessWidget {
   const CfAccountsPage({super.key});
@@ -19,7 +19,7 @@ class CfAccountsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final state = AppScope.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Cloudflare accounts')),
+      appBar: AppBar(title: const Text('Cloudflare Verification')),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(
