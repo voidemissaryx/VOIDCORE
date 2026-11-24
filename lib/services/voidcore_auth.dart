@@ -115,6 +115,27 @@ class VoidcoreAuthService {
     await updateUser({'password': password});
   }
 
+  /// Reads the signed-in user's own profile role; never trusts editable auth metadata.
+  Future<bool> isAdmin() async {
+    if (!isConfigured) return false;
+    final token = await _storage.read(key: _access);
+    if (token == null) return false;
+    final user = await currentUser();
+    final id = user?['id'];
+    if (id is! String || id.isEmpty) return false;
+    final uri = Uri.parse('$_base/rest/v1/profiles').replace(
+      queryParameters: {'select': 'role', 'id': 'eq.$id'},
+    );
+    final response = await http.get(uri, headers: {
+      'apikey': _key,
+      'Authorization': 'Bearer $token',
+    });
+    if (response.statusCode != 200) return false;
+    final decoded = jsonDecode(response.body);
+    return decoded is List && decoded.isNotEmpty &&
+        decoded.first is Map && decoded.first['role'] == 'admin';
+  }
+
   Future<Map<String, dynamic>> adminRequest(Map<String, dynamic> body) async {
     final token = await _storage.read(key: _access);
     if (token == null) throw Exception('Sign in to continue.');
