@@ -136,7 +136,7 @@ class _StepBar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
-        for (var i = 0; i < 4; i++) ...[
+        for (var i = 0; i < 3; i++) ...[
           if (i > 0) const SizedBox(width: 6),
           Expanded(
             child: AnimatedContainer(
@@ -579,11 +579,8 @@ class _InstallStepState extends State<_InstallStep> {
   final _deployed = <WorkerType, Deployment>{};
   bool _saved = false;
 
-  /// Adding an account only deploys; WARP and MASQUE belong to the device.
-  late final _rows = {
-    for (final i in _Item.values)
-      if (!widget.addingAccount || i == _Item.workers || i == _Item.pages) i: _Row(),
-  };
+  /// All native services are installed together after a Cloudflare token is verified.
+  late final _rows = {for (final i in _Item.values) i: _Row()};
   bool _started = false;
   bool _busy = false;
   List<String>? _bridges;
