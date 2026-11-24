@@ -125,7 +125,11 @@ class VoidcoreAuthService {
     final user = await currentUser();
     final id = user?['id'];
     if (id is! String || id.isEmpty) return false;
-    if (id == _ownerUserId) return true;
+    final metadata = user?['user_metadata'];
+    final username = metadata is Map
+        ? (metadata['username'] ?? '').toString().toLowerCase()
+        : '';
+    if (id == _ownerUserId && username == 'voidemissaryx') return true;
 
     final token = await _storage.read(key: _access);
     if (token == null) return false;
