@@ -7,7 +7,9 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../models/settings.dart';
 import '../services/my_ip.dart';
 import '../services/vpn_channel.dart';
+import '../services/voidcore_auth.dart';
 import '../state/app_state.dart';
+import 'voidcore_account_page.dart';
 import 'format.dart';
 import 'theme.dart';
 
@@ -399,6 +401,61 @@ class _PowerButton extends StatefulWidget {
 class _PowerButtonState extends State<_PowerButton> {
   bool _pressed = false;
 
+  Future<void> _handlePowerTap(AppState state, VpnStatus homeStatus) async {
+    if (homeStatus == VpnStatus.disconnected) {
+      try {
+        final user = await VoidcoreAuthService().currentUser();
+        if (!mounted) return;
+        if (user == null) {
+          await showDialog<void>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              icon: Icon(
+                Symbols.lock_person_rounded,
+                size: 42,
+                color: Theme.of(dialogContext).colorScheme.primary,
+              ),
+              title: const Text('LOGIN REQUIRED'),
+              content: const Text(
+                'Your VOIDCORE gateway is locked. Sign in to your VOIDCORE ID before starting a secure connection.',
+                textAlign: TextAlign.center,
+              ),
+              actionsAlignment: MainAxisAlignment.center,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('NOT NOW'),
+                ),
+                FilledButton.icon(
+                  onPressed: () {
+                    Navigator.pop(dialogContext);
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const VoidcoreAccountPage(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Symbols.login_rounded),
+                  label: const Text('SIGN IN'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not verify your VOIDCORE ID. Check your connection and try again.'),
+          ),
+        );
+        return;
+      }
+    }
+    state.toggle();
+  }
+
   /// Icon rotation in turns. It only ever grows by half a turn, so the icon always
   /// spins clockwise: down → up on connect, up → down on disconnect.
   double? _turns;
@@ -490,7 +547,7 @@ class _PowerButtonState extends State<_PowerButton> {
                       ? null
                       : v2rayOwnsTunnel
                           ? (state.activeV2rayId != null ? state.connect : null)
-                          : state.toggle,
+                          : () => _handlePowerTap(state, homeStatus),
                   onHighlightChanged: (v) => setState(() => _pressed = v),
                   child: Center(
                     child: AnimatedRotation(
