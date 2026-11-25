@@ -11,7 +11,11 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 VERSION=16.0.2
-BASE="https://dist.torproject.org/torbrowser/$VERSION"
+# Prefer the primary distribution host, then the Tor Project's official EFF mirror.
+MIRRORS=(
+  "https://dist.torproject.org/torbrowser/$VERSION"
+  "https://tor.eff.org/dist/torbrowser/$VERSION"
+)
 JNI=../android/app/src/main/jniLibs
 ASSETS=../android/app/src/main/assets
 
@@ -28,8 +32,23 @@ trap 'rm -rf "$TMP"' EXIT
 for arch in aarch64 armv7 x86_64; do
   file="tor-expert-bundle-android-$arch-$VERSION.tar.gz"
   echo "fetching $file"
-  curl -fsSL -o "$TMP/$file" "$BASE/$file"
-  echo "${SHA[$arch]}  $TMP/$file" | sha256sum -c --quiet -
+  downloaded=false
+  for base in "${MIRRORS[@]}"; do
+    if curl -fsSL --retry 2 --connect-timeout 20 -o "$TMP/$file" "$base/$file"; then
+      if echo "${SHA[$arch]}  $TMP/$file" | sha256sum -c --quiet -; then
+        downloaded=true
+        break
+      fi
+      echo "Checksum verification failed from $base; trying the next official mirror." >&2
+      rm -f "$TMP/$file"
+    else
+      echo "Download failed from $base; trying the next official mirror." >&2
+    fi
+  done
+  if [ "$downloaded" != true ]; then
+    echo "Unable to fetch and verify $file from any configured official mirror." >&2
+    exit 1
+  fi
   mkdir -p "$TMP/$arch" "$JNI/${ABI[$arch]}"
   tar -xzf "$TMP/$file" -C "$TMP/$arch"
   cp "$TMP/$arch/tor/libTor.so" "$JNI/${ABI[$arch]}/libtor.so"
