@@ -263,6 +263,45 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                 Text('One account. Your VOIDCORE experience.', textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
                 const SizedBox(height: 24),
+                if (_awaitingVerification) ...[
+                  Card(
+                    color: const Color(0xFF211432),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22),
+                      side: BorderSide(color: scheme.primary.withValues(alpha: .45))),
+                    child: Padding(
+                      padding: const EdgeInsets.all(22),
+                      child: Column(children: [
+                        const Icon(Symbols.mark_email_unread_rounded, size: 48, color: Color(0xFFC49AFF)),
+                        const SizedBox(height: 14),
+                        Text('VERIFY YOUR EMAIL', textAlign: TextAlign.center,
+                          style: theme.textTheme.titleLarge?.copyWith(color: Colors.white,
+                            fontWeight: FontWeight.w900, letterSpacing: 1.1)),
+                        const SizedBox(height: 8),
+                        Text('Enter the 6-digit code sent to ' + _email.text.trim() + '.',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70, height: 1.5)),
+                        const SizedBox(height: 20),
+                        TextField(controller: _verificationCode, keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center, maxLength: 6,
+                          style: theme.textTheme.headlineMedium?.copyWith(color: Colors.white,
+                            letterSpacing: 12, fontWeight: FontWeight.w800),
+                          decoration: InputDecoration(counterText: '', hintText: '••••••',
+                            hintStyle: const TextStyle(color: Colors.white38, letterSpacing: 12),
+                            filled: true, fillColor: Colors.white.withValues(alpha: .07),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)))),
+                        const SizedBox(height: 14),
+                        SizedBox(width: double.infinity, child: FilledButton.icon(
+                          onPressed: _busy ? null : _verifyCode,
+                          icon: const Icon(Symbols.verified_user_rounded), label: const Text('Verify email'))),
+                        TextButton(onPressed: _busy ? null : _resend, child: const Text('Resend code')),
+                        TextButton(onPressed: _busy ? null : () => setState(() {
+                          _awaitingVerification = false; _message = null;
+                        }), child: const Text('Back to account details')),
+                      ]),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ] else ...[
                 SegmentedButton<bool>(segments: const [
                   ButtonSegment(value: true, label: Text('Create account'), icon: Icon(Symbols.person_add_rounded)),
                   ButtonSegment(value: false, label: Text('Sign in'), icon: Icon(Symbols.login_rounded)),
@@ -292,7 +331,8 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                   ],
                 ])),
                 const SizedBox(height: 16),
-                if (_message != null && _message!.startsWith('Your account is currently suspended.'))
+
+                ],                if (_message != null && _message!.startsWith('Your account is currently suspended.'))
                   Padding(
                     padding: const EdgeInsets.only(bottom: 14),
                     child: Card(
@@ -326,10 +366,12 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                 else if (_message != null)
                   Padding(padding: const EdgeInsets.only(bottom: 12),
                     child: Text(_message!, textAlign: TextAlign.center, style: TextStyle(color: scheme.primary))),
-                FilledButton(onPressed: _busy ? null : _submit,
-                  child: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                    : Text(_creating ? 'Create VOIDCORE account' : 'Sign in')),
-                if (!_creating) TextButton(onPressed: _busy ? null : _resend, child: const Text('Resend verification email')),
+                if (!_awaitingVerification) ...[
+                  FilledButton(onPressed: _busy ? null : _submit,
+                    child: _busy ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Text(_creating ? 'Create VOIDCORE account' : 'Sign in')),
+                  if (!_creating) TextButton(onPressed: _busy ? null : _resend, child: const Text('Resend verification email')),
+                ],
               ],
               if (_message != null && _user != null) Padding(padding: const EdgeInsets.only(top: 12),
                 child: Text(_message!, textAlign: TextAlign.center)),
