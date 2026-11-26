@@ -81,7 +81,7 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
     if (email.isEmpty) return;
     await _run(() async {
       await _auth.resendVerification(email);
-      return 'A fresh verification link has been sent. Check your inbox.';
+      return 'A new verification email was requested. Check Inbox and Spam/Junk.';
     });
   }
 
