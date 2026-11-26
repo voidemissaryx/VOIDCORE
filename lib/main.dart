@@ -78,13 +78,13 @@ class _RootState extends State<_Root> {
       await VoidcoreAuthService().verifyEmailLink(uri);
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          const SnackBar(content: Text('🎉 Email verified! Your VOIDCORE account is active.')),
+          const SnackBar(content: Text('Email verified. You are now signed in to VOIDCORE.')),
         );
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text('Email verification failed: $error')),
+          const SnackBar(content: Text('Could not complete verification. Open Account and request a new email.')),
         );
       }
     }
