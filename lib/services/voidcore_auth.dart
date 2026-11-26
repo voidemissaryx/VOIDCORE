@@ -25,9 +25,9 @@ class VoidcoreAuthService {
 
   /// Creates the user and asks Supabase Auth to send its email OTP.
   Future<void> signUp({required String username, required String email, required String password}) async {
-    await _post('/auth/v1/signup', {
-      'email': email.trim(),
-      'password': password,
+    final redirect = Uri.encodeComponent(redirectUrl);
+    await _post('/auth/v1/signup?redirect_to=$redirect', {
+      'email': email.trim(), 'password': password,
       'data': {'username': username.trim()},
     });
   }
@@ -47,17 +47,21 @@ class VoidcoreAuthService {
   }
 
   Future<void> verifyEmailLink(Uri uri) async {
-    final tokenHash = uri.queryParameters['token_hash'];
-    final type = uri.queryParameters['type'] ?? 'signup';
-    if (tokenHash == null || tokenHash.isEmpty) {
-      throw Exception('Verification link is incomplete. Request a new email link.');
+    final fragment = Uri.splitQueryString(uri.fragment);
+    final access = uri.queryParameters['access_token'] ?? fragment['access_token'];
+    final refresh = uri.queryParameters['refresh_token'] ?? fragment['refresh_token'];
+    if (access != null && access.isNotEmpty) {
+      await _save({'access_token': access, if (refresh != null) 'refresh_token': refresh});
+      return;
     }
-    final session = await _post('/auth/v1/verify', {'token_hash': tokenHash, 'type': type});
-    if (session['access_token'] is String) {
-      await _save(session);
-    } else {
-      throw Exception('Email verification succeeded. Please sign in to continue.');
+    final hash = uri.queryParameters['token_hash'] ?? fragment['token_hash'];
+    final type = uri.queryParameters['type'] ?? fragment['type'] ?? 'signup';
+    if (hash == null || hash.isEmpty) {
+      throw Exception('Verification link is incomplete or expired. Request a new email.');
     }
+    final session = await _post('/auth/v1/verify', {'token_hash': hash, 'type': type});
+    if (session['access_token'] is String) { await _save(session); }
+    else { throw Exception('Email verified, but no sign-in session was returned. Please sign in.'); }
   }
 
   Future<void> signIn({required String email, required String password}) async {
@@ -86,8 +90,10 @@ class VoidcoreAuthService {
     await _save(d);
   }
 
-  Future<void> resendVerification(String email) async =>
-      _post('/auth/v1/resend', {'type': 'signup', 'email': email.trim()});
+  Future<void> resendVerification(String email) async {
+    final redirect = Uri.encodeComponent(redirectUrl);
+    await _post('/auth/v1/resend?redirect_to=$redirect', {'type': 'signup', 'email': email.trim()});
+  }
 
   Future<Map<String, dynamic>> updateUser(Map<String, dynamic> changes, {String? redirectTo}) async {
     final token = await _storage.read(key: _access);
