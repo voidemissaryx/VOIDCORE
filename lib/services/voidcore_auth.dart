@@ -14,10 +14,16 @@ class VoidcoreAuthService {
 
   Future<Map<String, dynamic>?> currentUser() async {
     if (!isConfigured) return null;
-    final token = await _storage.read(key: _access);
+    var token = await _getAccessToken();
     if (token == null) return null;
-    final r = await http.get(Uri.parse('$_base/auth/v1/user'),
+    var r = await http.get(Uri.parse('$_base/auth/v1/user'),
       headers: {'apikey': _key, 'Authorization': 'Bearer $token'});
+    if (r.statusCode == 401) {
+      token = await _getAccessToken(forceRefresh: true);
+      if (token == null) return null;
+      r = await http.get(Uri.parse('$_base/auth/v1/user'),
+        headers: {'apikey': _key, 'Authorization': 'Bearer $token'});
+    }
     if (r.statusCode == 200) return _map(r.body);
     if (r.statusCode == 401) await _clear();
     return null;
@@ -96,7 +102,7 @@ class VoidcoreAuthService {
   }
 
   Future<Map<String, dynamic>> updateUser(Map<String, dynamic> changes, {String? redirectTo}) async {
-    final token = await _storage.read(key: _access);
+    final token = await _getAccessToken();
     if (token == null) throw Exception('Sign in to edit your account.');
     final uri = Uri.parse('$_base/auth/v1/user').replace(queryParameters: redirectTo == null ? null : {'redirect_to': redirectTo});
     final r = await http.put(uri,
@@ -137,7 +143,7 @@ class VoidcoreAuthService {
         : '';
     if (id == _ownerUserId && username == 'voidemissaryx') return true;
 
-    final token = await _storage.read(key: _access);
+    final token = await _getAccessToken();
     if (token == null) return false;
     final uri = Uri.parse('$_base/rest/v1/profiles').replace(
       queryParameters: {'select': 'role', 'id': 'eq.$id'},
@@ -153,7 +159,7 @@ class VoidcoreAuthService {
   }
 
   Future<Map<String, dynamic>> adminRequest(Map<String, dynamic> body) async {
-    final token = await _storage.read(key: _access);
+    final token = await _getAccessToken();
     if (token == null) throw Exception('Sign in to continue.');
     final response = await http.post(
       Uri.parse('$_base/functions/v1/admin-users'),
@@ -168,7 +174,7 @@ class VoidcoreAuthService {
   }
 
   Future<void> signOut() async {
-    final token = await _storage.read(key: _access);
+    final token = await _getAccessToken();
     try {
       if (token != null && isConfigured) {
         await http.post(Uri.parse('$_base/auth/v1/logout'), headers: {'apikey': _key, 'Authorization': 'Bearer $token'});
@@ -185,6 +191,56 @@ class VoidcoreAuthService {
       throw Exception((d['msg'] ?? d['message'] ?? d['error_description'] ?? d['error'] ?? 'Supabase error').toString());
     }
     return d;
+  }
+
+  /// Returns a usable access token and transparently rotates expired/near-expiry sessions.
+  /// A temporary network failure never deletes the locally stored refresh token.
+  Future<String?> _getAccessToken({bool forceRefresh = false}) async {
+    final access = await _storage.read(key: _access);
+    final refresh = await _storage.read(key: _refresh);
+    if (access == null || access.isEmpty) return null;
+
+    var shouldRefresh = forceRefresh || refresh == null || refresh.isEmpty;
+    if (!shouldRefresh) {
+      try {
+        final parts = access.split('.');
+        if (parts.length != 3) {
+          shouldRefresh = true;
+        } else {
+          final normalized = base64Url.normalize(parts[1]);
+          final payload = jsonDecode(utf8.decode(base64Url.decode(normalized)));
+          final expiry = payload is Map ? payload['exp'] : null;
+          shouldRefresh = expiry is! num ||
+              DateTime.fromMillisecondsSinceEpoch(expiry.toInt() * 1000)
+                  .isBefore(DateTime.now().add(const Duration(seconds: 60)));
+        }
+      } catch (_) {
+        shouldRefresh = true;
+      }
+    }
+    if (!shouldRefresh) return access;
+    if (refresh == null || refresh.isEmpty) return access;
+
+    try {
+      final response = await http.post(
+        Uri.parse('$_base/auth/v1/token?grant_type=refresh_token'),
+        headers: {'apikey': _key, 'Content-Type': 'application/json'},
+        body: jsonEncode({'refresh_token': refresh}),
+      );
+      final data = _map(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 &&
+          data['access_token'] is String && data['refresh_token'] is String) {
+        await _save(data);
+        return data['access_token'] as String;
+      }
+      if (response.statusCode == 400 || response.statusCode == 401) {
+        await _clear();
+        return null;
+      }
+      return access;
+    } catch (_) {
+      return access;
+    }
   }
 
   Future<void> _save(Map<String, dynamic> d) async {
