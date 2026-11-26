@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Fetches Tor Project's official Android expert bundles and installs, per ABI:
 #   tor      → android/app/src/main/jniLibs/<abi>/libtor.so
-#   lyrebird → android/app/src/main/jniLibs/<abi>/liblyrebird.so   (obfs4, meek, webtunnel, snowflake)
-# plus, once: Tor's IPv4 and IPv6 GeoIP files (for ExitNodes by country) and pt_config.json
-# (the built-in bridges) as app assets. Both binaries are executables despite the .so names:
-# Android only installs native libraries, and runs them from nativeLibraryDir.
-# Hashes are from https://dist.torproject.org/torbrowser/$VERSION/sha256sums-signed-build.txt
+#   lyrebird → android/app/src/main/jniLibs/<abi>/liblyrebird.so
+# plus Tor GeoIP data and pluggable transport configuration as app assets.
+# SHA-256 values are pinned from Tor Project's signed build manifest:
+# https://archive.torproject.org/tor-package-archive/torbrowser/16.0/sha256sums-signed-build.txt
 # Paths are relative to this script (scripts/), so it runs from anywhere.
 set -euo pipefail
 cd "$(dirname "$0")"
 
-VERSION=16.0.2
-# Prefer the primary distribution host, then the Tor Project's official EFF mirror.
+VERSION=16.0
+# The 16.0 expert bundles are hosted in Tor Project's package archive.
+# Keep the official EFF mirror as a fallback.
 MIRRORS=(
-  "https://dist.torproject.org/torbrowser/$VERSION"
+  "https://archive.torproject.org/tor-package-archive/torbrowser/$VERSION"
   "https://tor.eff.org/dist/torbrowser/$VERSION"
 )
 JNI=../android/app/src/main/jniLibs
@@ -21,9 +21,9 @@ ASSETS=../android/app/src/main/assets
 
 declare -A ABI=([aarch64]=arm64-v8a [armv7]=armeabi-v7a [x86_64]=x86_64)
 declare -A SHA=(
-  [aarch64]=5fc4967b88bbf81546386bbdecbe86a70982ff7810cef8a155040f8aedd1905f
-  [armv7]=db2b893bc5d2d09af25690cf267f07ca1e0178b39a4e9a47be0c1d577288992d
-  [x86_64]=2a3e89f991dc753306984dfadcd79e4017eb162e2a376b7ff42653c4b0c61286
+  [aarch64]=bf8f4c63652fd7daa62288713c7fa512f244a5b972808f6251450e5fdfca9120
+  [armv7]=13befa352b64c32ba460b63066179bb1c9eaf6c3ea7057ae860dcdd22b8acf7b
+  [x86_64]=ab3152ba164bcd49e50175086c62e40ffa2bf9002a4f6473f77111bd88b0462b
 )
 
 TMP=$(mktemp -d)
