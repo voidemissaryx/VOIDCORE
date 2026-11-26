@@ -96,6 +96,11 @@ class VoidcoreAuthService {
     await _save(d);
   }
 
+  Future<void> sendPasswordReset(String email) async {
+    final redirect = Uri.encodeComponent(redirectUrl);
+    await _post('/auth/v1/recover?redirect_to=$redirect', {'email': email.trim()});
+  }
+
   Future<void> resendVerification(String email) async {
     final redirect = Uri.encodeComponent(redirectUrl);
     await _post('/auth/v1/resend?redirect_to=$redirect', {'type': 'signup', 'email': email.trim()});
