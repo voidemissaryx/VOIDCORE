@@ -327,7 +327,7 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                     if (_awaitingVerification) ...[
                       TextField(controller: _verificationCode, keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.done, maxLength: 8,
-                        inputFormatters: const [FilteringTextInputFormatter.digitsOnly],
+                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.white, fontSize: 25, letterSpacing: 8, fontWeight: FontWeight.w700),
                         decoration: InputDecoration(counterText: '', hintText: '••••••••',
