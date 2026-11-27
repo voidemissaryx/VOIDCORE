@@ -34,6 +34,8 @@ jobs:
         run: |
           set -euo pipefail
 
+          # GitHub workflow inputs may contain accidental leading/trailing whitespace.
+          VERSION_INPUT="$(printf '%s' "${VERSION_INPUT:-}" | tr -d '[:space:]')"
           VERSION="${VERSION_INPUT#v}"
           if [[ -z "$VERSION" && "$GITHUB_REF_TYPE" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
