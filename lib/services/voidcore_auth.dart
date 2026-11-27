@@ -38,12 +38,27 @@ class VoidcoreAuthService {
     });
   }
 
-  /// Confirms the six-digit email code from the Supabase email template.
-  Future<void> verifySignupCode({required String email, required String code}) async {
+  /// Sends a passwordless email OTP for an existing account.
+  Future<void> sendLoginCode(String email) async {
+    await _post('/auth/v1/otp', {
+      'email': email.trim(),
+      'create_user': false,
+    });
+  }
+
+  /// Confirms the six-digit email code for signup or passwordless sign-in.
+  Future<void> verifyEmailCode({
+    required String email,
+    required String code,
+    required String type,
+  }) async {
+    if (type != 'signup' && type != 'email') {
+      throw ArgumentError.value(type, 'type', 'Unsupported email OTP type');
+    }
     final session = await _post('/auth/v1/verify', {
       'email': email.trim(),
       'token': code.trim(),
-      'type': 'signup',
+      'type': type,
     });
     if (session['access_token'] is String) {
       await _save(session);
