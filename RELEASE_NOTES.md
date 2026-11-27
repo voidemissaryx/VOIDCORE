@@ -1,20 +1,17 @@
-# 🚀 VOIDCORE VPN — Version 1.5.1
+# 🚀 VOIDCORE VPN — Version 1.6.0
 
-**A stability-focused update with improved release reliability and connection access control.**
+**A maintenance release focused on account access and build reliability.**
 
-## 🔧 Build & Reliability
-- Fixed the Tor Android expert-bundle download step by adding an official mirror fallback.
-- Verify every downloaded Tor bundle against its pinned SHA-256 checksum before packaging.
-- Improved failure reporting when an official download source is unavailable.
+## 🔐 Account
+- Updated the account verification flow to validate 8-digit email codes.
+- Preserved sign-in, sign-up, and password recovery screens.
 
-## 🔐 Account & Connection
-- Require a signed-in VOIDCORE account before starting a VOIDCORE connection.
-- Added a clear sign-in prompt when a user tries to connect without an active account.
-- Added a direct route to the VOIDCORE account screen from the connection prompt.
+## 🔧 Reliability
+- Repaired the account verification method syntax.
+- Removed malformed duplicate code from the account page.
 
 ## 📦 Android Release
-- Updated the application version to **1.5.1**.
-- Android CI runs tests and builds the release APK for this version.
+- Updated the application version to **1.6.0** (build 16).
 
 ---
 
