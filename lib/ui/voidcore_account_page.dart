@@ -378,7 +378,7 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                         _authTextField(controller: _email, label: 'Email address', icon: Symbols.mail_outline_rounded,
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) => (v ?? '').contains('@') ? null : 'Enter a valid email address.'),
-                        if (!_forgotPassword) ...[
+                        if (_creating && !_forgotPassword) ...[
                           const SizedBox(height: 13),
                           TextFormField(controller: _password, obscureText: _hide, style: const TextStyle(color: Colors.white),
                             decoration: _authDecoration('Password', Symbols.lock_outline_rounded).copyWith(
