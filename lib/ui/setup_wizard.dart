@@ -251,8 +251,15 @@ class _VoidcoreSetupStepState extends State<_VoidcoreSetupStep> {
   bool _busy = false;
   bool _sent = false;
   bool _signIn = false;
+  bool _loginOtpPending = false;
   bool _verified = false;
+  bool _hidePassword = true;
   String? _message;
+
+  static const _panel = Color(0xFF111019);
+  static const _field = Color(0xFF211D2B);
+  static const _accent = Color(0xFF7650C8);
+  static const _border = Color(0xFF51465F);
 
   @override
   void initState() {
@@ -270,7 +277,7 @@ class _VoidcoreSetupStepState extends State<_VoidcoreSetupStep> {
         });
       }
     } catch (_) {
-      // Keep the signup screen available if the saved session cannot be restored.
+      // Keep the account form available if a saved session cannot be restored.
     }
   }
 
@@ -282,6 +289,23 @@ class _VoidcoreSetupStepState extends State<_VoidcoreSetupStep> {
     _code.dispose();
     super.dispose();
   }
+
+  InputDecoration _decoration(String label, IconData icon) => InputDecoration(
+    labelText: label,
+    labelStyle: const TextStyle(color: Color(0xFFB9AFC5)),
+    prefixIcon: Icon(icon, color: const Color(0xFFB9AFC5)),
+    filled: true,
+    fillColor: _field,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: _border),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: const BorderSide(color: Color(0xFFB18AFF), width: 1.4),
+    ),
+  );
 
   Future<void> _run(Future<void> Function() action, {String? success}) async {
     setState(() { _busy = true; _message = null; });
@@ -303,26 +327,33 @@ class _VoidcoreSetupStepState extends State<_VoidcoreSetupStep> {
     if (!_form.currentState!.validate()) return;
 
     await _run(() async {
-      if (_sent && !_signIn) {
-        await _auth.verifySignupCode(email: _email.text.trim(), code: _code.text.trim());
-        if (mounted) {
-          setState(() {
-            _verified = true;
-            _message = 'Email verified successfully. Continue to Cloudflare verification.';
-          });
+      if (_sent) {
+        final isLogin = _loginOtpPending;
+        await _auth.verifyEmailCode(
+          email: _email.text.trim(),
+          code: _code.text.trim(),
+          type: isLogin ? 'email' : 'signup',
+        );
+        final user = await _auth.currentUser();
+        if (user == null || user['email_confirmed_at'] == null) {
+          throw Exception('Email verification could not be confirmed. Please try again.');
         }
+        if (mounted) setState(() {
+          _verified = true;
+          _sent = false;
+          _message = isLogin
+              ? 'Signed in successfully. Continue to Cloudflare verification.'
+              : 'Email verified successfully. Continue to Cloudflare verification.';
+        });
         return;
       }
 
       if (_signIn) {
-        await _auth.signIn(email: _email.text.trim(), password: _password.text);
-        final user = await _auth.currentUser();
-        if (user == null || user['email_confirmed_at'] == null) {
-          throw Exception('Please verify your email before continuing.');
-        }
+        await _auth.sendLoginCode(_email.text.trim());
         if (mounted) setState(() {
-          _verified = true;
-          _message = 'Signed in successfully.';
+          _sent = true;
+          _loginOtpPending = true;
+          _message = 'A 6-digit sign-in code has been sent to your email.';
         });
         return;
       }
@@ -334,124 +365,294 @@ class _VoidcoreSetupStepState extends State<_VoidcoreSetupStep> {
       );
       if (mounted) setState(() {
         _sent = true;
-        _message = 'A six-digit verification code has been sent to your email.';
+        _loginOtpPending = false;
+        _message = 'A 6-digit verification code has been sent to your email.';
       });
     });
+  }
+
+  Future<void> _resendCode() async {
+    await _run(() async {
+      if (_loginOtpPending) {
+        await _auth.sendLoginCode(_email.text.trim());
+      } else {
+        await _auth.resendVerification(_email.text.trim());
+      }
+    }, success: 'A new 6-digit code has been sent. Check your inbox and Spam/Junk.');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final heading = _verified
+        ? 'You’re all set'
+        : _sent
+            ? (_loginOtpPending ? 'Verify your sign-in' : 'Verify your email')
+            : _signIn
+                ? 'Welcome back'
+                : 'Create your VOIDCORE ID';
+
+    Widget field(TextEditingController controller, String label, IconData icon,
+        {TextInputType? keyboardType, String? Function(String?)? validator}) {
+      return TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        autocorrect: false,
+        style: const TextStyle(color: Colors.white),
+        decoration: _decoration(label, icon),
+        validator: validator,
+      );
+    }
+
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
       children: [
-        Icon(Symbols.shield_person_rounded, size: 48, color: scheme.primary),
-        const SizedBox(height: 16),
-        Text('YOUR VOIDCORE ID',
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-        const SizedBox(height: 8),
-        Text(
-          _verified
-              ? 'Your VOIDCORE account is ready.'
-              : 'Create a VOIDCORE account or sign in to continue.',
-          style: theme.textTheme.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
-        ),
-        const SizedBox(height: 20),
-        if (!_sent && !_verified)
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, label: Text('Create account'), icon: Icon(Symbols.person_add_rounded)),
-              ButtonSegment(value: true, label: Text('Sign in'), icon: Icon(Symbols.login_rounded)),
+        Container(
+          padding: const EdgeInsets.fromLTRB(22, 24, 22, 22),
+          decoration: BoxDecoration(
+            color: _panel,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFF393047)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF8B5CF6).withValues(alpha: .10),
+                blurRadius: 32,
+                offset: const Offset(0, 12),
+              ),
             ],
-            selected: {_signIn},
-            onSelectionChanged: _busy ? null : (value) => setState(() {
-              _signIn = value.first;
-              _message = null;
-            }),
           ),
-        const SizedBox(height: 16),
-        if (!_verified)
-          Form(
-            key: _form,
-            child: Column(
-              children: [
-                if (!_signIn && !_sent) ...[
-                  TextFormField(
-                    controller: _username,
-                    textCapitalization: TextCapitalization.none,
-                    autocorrect: false,
-                    decoration: const InputDecoration(
-                      labelText: 'Username',
-                      prefixIcon: Icon(Symbols.alternate_email_rounded),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _accent,
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    validator: (value) => _signIn || _sent ||
-                            RegExp(r'^[A-Za-z0-9_]{3,24}$').hasMatch((value ?? '').trim())
-                        ? null
-                        : 'Use 3–24 letters, numbers or underscores.',
+                    child: const Icon(Symbols.bolt_rounded, color: Colors.white, size: 23),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(width: 11),
+                  const Text(
+                    'VOIDCORE',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.8,
+                      fontSize: 17,
+                    ),
+                  ),
+                  const Spacer(),
+                  const Icon(Symbols.shield_lock_rounded, color: Color(0xFFB18AFF), size: 22),
                 ],
-                TextFormField(
-                  controller: _email,
-                  keyboardType: TextInputType.emailAddress,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Email address',
-                    prefixIcon: Icon(Symbols.mail_outline_rounded),
-                  ),
-                  validator: (value) => (value ?? '').contains('@') ? null : 'Enter a valid email.',
+              ),
+              const SizedBox(height: 28),
+              Text(
+                heading,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
                 ),
-                if (!_sent) ...[
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                      prefixIcon: Icon(Symbols.lock_outline_rounded),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _verified
+                    ? 'Your account is connected. Continue to securely link your Cloudflare account.'
+                    : _sent
+                        ? 'Enter the 6-digit security code sent to your email address.'
+                        : _signIn
+                            ? 'Enter your email and we’ll send you a one-time sign-in code.'
+                            : 'Create an account to sync and protect your VOIDCORE setup.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.white70,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 22),
+              if (!_sent && !_verified) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _busy ? null : () => setState(() {
+                          _signIn = true;
+                          _message = null;
+                        }),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: _signIn ? _accent : _field,
+                          side: BorderSide(color: _signIn ? const Color(0xFF9C7AE8) : _border),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Sign in', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
                     ),
-                    validator: (value) => (value ?? '').length >= 8 ? null : 'Use at least 8 characters.',
-                  ),
-                ],
-                if (_sent && !_signIn) ...[
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _code,
-                    keyboardType: TextInputType.number,
-                    maxLength: 6,
-                    decoration: const InputDecoration(
-                      labelText: '6-digit email verification code',
-                      prefixIcon: Icon(Symbols.mark_email_read_rounded),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _busy ? null : () => setState(() {
+                          _signIn = false;
+                          _message = null;
+                        }),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: !_signIn ? _accent : _field,
+                          side: BorderSide(color: !_signIn ? const Color(0xFF9C7AE8) : _border),
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: const Text('Sign up', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
                     ),
-                    validator: (value) => RegExp(r'^\d{6}$').hasMatch((value ?? '').trim())
-                        ? null
-                        : 'Enter the six-digit code from your email.',
-                  ),
-                ],
+                  ],
+                ),
+                const SizedBox(height: 18),
               ],
-            ),
+              if (!_verified)
+                Form(
+                  key: _form,
+                  child: Column(
+                    children: [
+                      if (!_signIn && !_sent) ...[
+                        field(
+                          _username,
+                          'Username',
+                          Symbols.person_outline_rounded,
+                          validator: (value) => RegExp(r'^[A-Za-z0-9_]{3,24}$')
+                                  .hasMatch((value ?? '').trim())
+                              ? null
+                              : 'Use 3–24 letters, numbers or underscores.',
+                        ),
+                        const SizedBox(height: 13),
+                      ],
+                      if (!_sent) ...[
+                        field(
+                          _email,
+                          'Email address',
+                          Symbols.mail_outline_rounded,
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) => (value ?? '').contains('@')
+                              ? null
+                              : 'Enter a valid email address.',
+                        ),
+                        if (!_signIn) ...[
+                          const SizedBox(height: 13),
+                          TextFormField(
+                            controller: _password,
+                            obscureText: _hidePassword,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: _decoration('Password', Symbols.lock_outline_rounded).copyWith(
+                              suffixIcon: IconButton(
+                                color: Colors.white70,
+                                icon: Icon(_hidePassword
+                                    ? Symbols.visibility_rounded
+                                    : Symbols.visibility_off_rounded),
+                                onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                              ),
+                            ),
+                            validator: (value) => (value ?? '').length >= 8
+                                ? null
+                                : 'Use at least 8 characters.',
+                          ),
+                        ],
+                      ] else
+                        TextFormField(
+                          controller: _code,
+                          keyboardType: TextInputType.number,
+                          textInputAction: TextInputAction.done,
+                          maxLength: 6,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 25,
+                            letterSpacing: 8,
+                            fontWeight: FontWeight.w700,
+                          ),
+                          decoration: _decoration('6-digit verification code', Symbols.mark_email_read_rounded)
+                              .copyWith(counterText: '', hintText: '••••••'),
+                          validator: (value) => RegExp(r'^\d{6}$').hasMatch((value ?? '').trim())
+                              ? null
+                              : 'Enter the 6-digit code from your email.',
+                        ),
+                    ],
+                  ),
+                ),
+              if (_message != null) ...[
+                const SizedBox(height: 15),
+                Text(
+                  _message!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: _verified ? Colors.greenAccent : const Color(0xFFD1B9FF),
+                    height: 1.4,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              SizedBox(
+                height: 50,
+                child: FilledButton(
+                  onPressed: _busy ? null : _submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _accent,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(11)),
+                  ),
+                  child: _busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(
+                          _verified
+                              ? 'Continue'
+                              : _sent
+                                  ? (_loginOtpPending ? 'Verify and sign in' : 'Verify email')
+                                  : _signIn
+                                      ? 'Send sign-in code'
+                                      : 'Create account',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                ),
+              ),
+              if (_sent && !_verified) ...[
+                const SizedBox(height: 5),
+                TextButton(
+                  onPressed: _busy ? null : _resendCode,
+                  child: const Text('Resend code'),
+                ),
+                TextButton(
+                  onPressed: _busy ? null : () => setState(() {
+                    _sent = false;
+                    _code.clear();
+                    _message = null;
+                  }),
+                  child: const Text('Back'),
+                ),
+              ],
+              const SizedBox(height: 14),
+              const Divider(color: Color(0xFF393047), height: 1),
+              const SizedBox(height: 13),
+              const Text(
+                'SECURE ACCESS  ·  VOIDCORE ID',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF8D829B),
+                  fontSize: 10,
+                  letterSpacing: 1.3,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-        if (_message != null) ...[
-          const SizedBox(height: 12),
-          Text(_message!, style: theme.textTheme.bodyMedium?.copyWith(
-            color: _verified ? Colors.green : scheme.primary)),
-        ],
-        const SizedBox(height: 20),
-        FilledButton(
-          onPressed: _busy ? null : _submit,
-          child: _busy
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              : Text(_verified ? 'Continue' : _sent && !_signIn ? 'Verify email' : _signIn ? 'Sign in' : 'Create account'),
         ),
-        if (_sent && !_signIn)
-          TextButton(
-            onPressed: _busy ? null : () => _run(
-              () => _auth.resendVerification(_email.text.trim()),
-              success: 'A new verification code has been sent.',
-            ),
-            child: const Text('Resend verification code'),
-          ),
       ],
     );
   }
