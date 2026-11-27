@@ -18,32 +18,35 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('first setup step presents VOIDCORE account creation', (tester) async {
+  testWidgets('first setup step presents the VOIDCORE sign-up experience', (tester) async {
     await pumpWizard(tester);
 
     expect(find.text('Step 1 of 3'), findsOneWidget);
-    expect(find.text('YOUR VOIDCORE ID'), findsOneWidget);
-    expect(find.text('Create account'), findsNWidgets(2));
+    expect(find.text('Create your VOIDCORE ID'), findsOneWidget);
+    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Sign up'), findsOneWidget);
+    expect(find.text('Create account'), findsOneWidget);
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Email address'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
   });
 
-  testWidgets('sign-in mode hides username and keeps email and password fields', (tester) async {
+  testWidgets('sign-in mode uses email OTP and hides username and password', (tester) async {
     await pumpWizard(tester);
 
     await tester.tap(find.text('Sign in').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('YOUR VOIDCORE ID'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Username'), findsNothing);
     expect(find.text('Email address'), findsOneWidget);
-    expect(find.text('Password'), findsOneWidget);
-    expect(find.text('Sign in'), findsNWidgets(2));
+    expect(find.text('Password'), findsNothing);
+    expect(find.text('Send sign-in code'), findsOneWidget);
 
-    await tester.tap(find.text('Create account').first);
+    await tester.tap(find.text('Sign up').first);
     await tester.pumpAndSettle();
 
+    expect(find.text('Create your VOIDCORE ID'), findsOneWidget);
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Email address'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
