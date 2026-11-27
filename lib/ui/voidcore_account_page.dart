@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 import '../services/voidcore_auth.dart';
@@ -87,7 +88,8 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
 
   Future<void> _verifyCode() async {
     final code = _verificationCode.text.trim();
-    if (!RegExp(r'^[0-9]{8}
+    if (!RegExp(r'^[0-9]{8}$').hasMatch(code)) {
+      setState(() => _message = 'Enter the 8-digit code from your email.');
       return;
     }
     await _run(() async {
@@ -97,6 +99,7 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
       return 'Email verified. Your VOIDCORE account is ready.';
     });
   }
+
   Future<void> _sendPasswordReset() async {
     final email = _email.text.trim();
     if (!email.contains('@')) {
