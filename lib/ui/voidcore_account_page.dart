@@ -20,7 +20,7 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
   final _confirm = TextEditingController();
   final _verificationCode = TextEditingController();
   bool _creating = false, _busy = false, _hide = true, _loading = true, _forgotPassword = false;
-  bool _awaitingVerification = false;
+  bool _awaitingVerification = false, _loginOtpPending = false;
   String? _message;
   Map<String, dynamic>? _user;
 
@@ -62,13 +62,17 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
         await _auth.signUp(username: _username.text, email: _email.text, password: _password.text);
         if (mounted) setState(() {
           _creating = false;
+          _loginOtpPending = false;
           _awaitingVerification = true;
-          _message = 'Check your inbox for the 8-digit verification code. Also check Spam or Junk.';
+          _message = 'Check your inbox for the 6-digit verification code. Also check Spam or Junk.';
         });
       } else {
-        await _auth.signIn(email: _email.text, password: _password.text);
-        final user = await _auth.currentUser();
-        if (mounted) setState(() { _user = user; _message = 'Welcome back to VOIDCORE.'; });
+        await _auth.sendLoginCode(_email.text.trim());
+        if (mounted) setState(() {
+          _loginOtpPending = true;
+          _awaitingVerification = true;
+          _message = 'A 6-digit sign-in code has been sent to your email.';
+        });
       }
     } catch (e) {
       if (mounted) setState(() => _message = _error(e));
@@ -81,22 +85,35 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
     final email = (_user?['email'] ?? _email.text).toString();
     if (email.isEmpty) return;
     await _run(() async {
+      if (_loginOtpPending) {
+        await _auth.sendLoginCode(email);
+        return 'A new 6-digit sign-in code was sent. Check Inbox and Spam/Junk.';
+      }
       await _auth.resendVerification(email);
-      return 'A new verification email was requested. Check Inbox and Spam/Junk.';
+      return 'A new 6-digit verification email was requested. Check Inbox and Spam/Junk.';
     });
   }
 
   Future<void> _verifyCode() async {
     final code = _verificationCode.text.trim();
-    if (!RegExp(r'^[0-9]{8}$').hasMatch(code)) {
-      setState(() => _message = 'Enter the 8-digit code from your email.');
+    if (!RegExp(r'^[0-9]{6}$').hasMatch(code)) {
+      setState(() => _message = 'Enter the 6-digit code from your email.');
       return;
     }
+    final isLogin = _loginOtpPending;
     await _run(() async {
-      await _auth.verifySignupCode(email: _email.text.trim(), code: code);
+      await _auth.verifyEmailCode(
+        email: _email.text.trim(),
+        code: code,
+        type: isLogin ? 'email' : 'signup',
+      );
       final user = await _auth.currentUser();
-      if (mounted) setState(() { _user = user; _awaitingVerification = false; });
-      return 'Email verified. Your VOIDCORE account is ready.';
+      if (mounted) setState(() {
+        _user = user;
+        _awaitingVerification = false;
+        _loginOtpPending = false;
+      });
+      return isLogin ? 'You are now signed in to VOIDCORE.' : 'Email verified. Your VOIDCORE account is ready.';
     });
   }
 
@@ -316,28 +333,28 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                       const Text('VOIDCORE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.8, fontSize: 17)),
                     ]),
                     const SizedBox(height: 28),
-                    Text(_awaitingVerification ? 'Verify your email' : _forgotPassword ? 'Reset your password' : _creating ? 'Create account' : 'Welcome back',
+                    Text(_awaitingVerification ? (_loginOtpPending ? 'Verify sign-in' : 'Verify your email') : _forgotPassword ? 'Reset your password' : _creating ? 'Create account' : 'Welcome back',
                       style: theme.textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 7),
-                    Text(_awaitingVerification ? 'Enter the 8-digit security code sent to your email.' :
+                    Text(_awaitingVerification ? 'Enter the 6-digit security code sent to your email.' :
                       _forgotPassword ? 'We will send you a password recovery email.' :
                       _creating ? 'Create your VOIDCORE ID to get started.' : 'Sign in with your VOIDCORE account.',
                       style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70, height: 1.45)),
                     const SizedBox(height: 24),
                     if (_awaitingVerification) ...[
                       TextField(controller: _verificationCode, keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done, maxLength: 8,
+                        textInputAction: TextInputAction.done, maxLength: 6,
                         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Colors.white, fontSize: 25, letterSpacing: 8, fontWeight: FontWeight.w700),
-                        decoration: InputDecoration(counterText: '', hintText: '••••••••',
+                        decoration: InputDecoration(counterText: '', hintText: '••••••',
                           hintStyle: const TextStyle(color: Colors.white38, letterSpacing: 8),
                           filled: true, fillColor: const Color(0xFF211D2B),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF51465F)))),
                       ),
                       const SizedBox(height: 16),
-                      _primaryAuthButton(label: 'Verify email', busy: _busy, onPressed: _verifyCode),
+                      _primaryAuthButton(label: _loginOtpPending ? 'Sign in' : 'Verify email', busy: _busy, onPressed: _verifyCode),
                       TextButton(onPressed: _busy ? null : _resend, child: const Text('Resend code')),
                       TextButton(onPressed: _busy ? null : () => setState(() { _awaitingVerification = false; _message = null; }), child: const Text('Back')),
                     ] else ...[
@@ -385,7 +402,7 @@ class _VoidcoreAccountPageState extends State<VoidcoreAccountPage> with WidgetsB
                       if (_message != null && !_message!.startsWith('Your account is currently suspended.'))
                         Padding(padding: const EdgeInsets.only(bottom: 14),
                           child: Text(_message!, textAlign: TextAlign.center, style: const TextStyle(color: Color(0xFFD1B9FF)))),
-                      _primaryAuthButton(label: _forgotPassword ? 'Send recovery email' : _creating ? 'Create account' : 'Sign in',
+                      _primaryAuthButton(label: _forgotPassword ? 'Send recovery email' : _creating ? 'Create account' : 'Send sign-in code',
                         busy: _busy, onPressed: _forgotPassword ? _sendPasswordReset : _submit),
                       if (!_creating && !_forgotPassword)
                         Align(alignment: Alignment.centerRight,
